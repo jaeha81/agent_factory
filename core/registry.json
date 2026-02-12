@@ -40,7 +40,15 @@
       "level": 1,
       "status": "online",
       "created_at": "2026-02-12T22:26:17Z"
+    },
+    {
+      "agent_id": "A0006",
+      "name": "워커SMOKE",
+      "role": "data_analyst",
+      "level": 1,
+      "status": "online",
+      "created_at": "2026-02-12T22:33:58Z"
     }
   ],
-  "updated": "2026-02-12T22:26:17Z"
+  "updated": "2026-02-12T22:33:58Z"
 }
