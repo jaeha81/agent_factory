@@ -32,7 +32,15 @@
       "level": 1,
       "status": "online",
       "created_at": "2026-02-12T22:14:47Z"
+    },
+    {
+      "agent_id": "A0005",
+      "name": "워커E2E",
+      "role": "data_analyst",
+      "level": 1,
+      "status": "online",
+      "created_at": "2026-02-12T22:26:17Z"
     }
   ],
-  "updated": "2026-02-12T22:14:47Z"
+  "updated": "2026-02-12T22:26:17Z"
 }
