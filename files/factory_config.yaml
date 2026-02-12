@@ -1,0 +1,12 @@
+factory:
+  name: "JH Agent Factory"
+  version: "1.0.0"
+  owner: "이재하"
+  protocol: "CHUNSIK_PROTOCOL_v1.0"
+
+agent_defaults:
+  storage_limit_mb: 100
+  context_token_limit: 4000
+  max_equipped_skills: 10
+  master_initial_level: 5
+  worker_initial_level: 1

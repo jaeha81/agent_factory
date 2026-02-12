@@ -1,0 +1,22 @@
+{
+  "agent_id": "",
+  "name": "",
+  "role": "",
+  "level": 1,
+  "status": "active",
+  "stats": {
+    "INT": 1,
+    "MEM": 1,
+    "SPD": 1,
+    "REL": 1
+  },
+  "equipped_skills": [],
+  "learning": {
+    "tasks_completed": 0,
+    "errors": 0
+  },
+  "metadata": {
+    "tags": []
+  },
+  "created_at": ""
+}

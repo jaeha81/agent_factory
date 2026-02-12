@@ -1,0 +1,28 @@
+{
+  "agent_id": "A0001",
+  "name": "춘식이",
+  "role": "master_controller",
+  "level": 5,
+  "status": "online",
+  "equipped_skills": [],
+  "stats": {
+    "INT": 5,
+    "MEM": 5,
+    "SPD": 3,
+    "REL": 5
+  },
+  "connections": [],
+  "learning": {
+    "total_tasks": 0,
+    "tasks_completed": 0,
+    "tasks_failed": 0,
+    "error_rate": 0.0
+  },
+  "metadata": {
+    "description": "시스템 총괄 관리 에이전트",
+    "tags": [],
+    "icon": "★"
+  },
+  "created_at": "2026-02-12T19:17:32Z",
+  "protocol": "CHUNSIK_PROTOCOL_v1.0"
+}

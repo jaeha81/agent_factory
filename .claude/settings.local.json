@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/create_master.py:*)",
+      "Bash(chcp:*)",
+      "Bash(set:*)",
+      "Bash(cmd /c \"chcp 65001 >nul & set PYTHONIOENCODING=utf-8 & python scripts/create_master.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python:*)",
+      "Bash(python -c:*)",
+      "Bash(git -C c:/agent_factory status)",
+      "Bash(git -C c:/agent_factory init)",
+      "Bash(git -C c:/agent_factory add:*)",
+      "Bash(git -C c:/agent_factory config core.protectNTFS false)",
+      "Bash(git -C c:/agent_factory rm:*)",
+      "Bash(git -C c:/agent_factory commit -m \"$\\(cat <<''EOF''\nInitial commit: JH Agent Factory project\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ]
+  }
+}
