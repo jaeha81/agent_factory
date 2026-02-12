@@ -1,3 +1,4 @@
 __pycache__/
 *.pyc
 nul
+.claude/settings.local.json
