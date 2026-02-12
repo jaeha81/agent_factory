@@ -7,16 +7,8 @@
       "role": "master_controller",
       "level": 5,
       "status": "online",
-      "created_at": "2026-02-12T19:17:32Z"
-    },
-    {
-      "agent_id": "A0002",
-      "name": "테스트봇",
-      "role": "data_analyst",
-      "level": 1,
-      "status": "online",
-      "created_at": "2026-02-12T19:21:00Z"
+      "created_at": "2026-02-12T19:25:03Z"
     }
   ],
-  "updated": "2026-02-12T19:21:00Z"
+  "updated": "2026-02-12T19:25:03Z"
 }

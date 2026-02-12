@@ -1,5 +1,0 @@
-# Agent Config — A0002
-active_frameworks: []
-memory_policy:
-  max_tokens: 4000
-  storage_mb: 100
