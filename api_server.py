@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 # 코어 모듈 임포트
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent / "core"))
 from agent_creator import (
     create_agent, create_master_agent,
     list_agents, get_agent, update_factory_registry
@@ -81,17 +81,16 @@ def api_create_agent(req: CreateAgentRequest):
     if req.is_master:
         result = create_master_agent(req.name)
     else:
-        result = create_agent(
-            name=req.name,
-            role=req.role,
-            created_by=req.created_by,
-            icon=req.icon,
-            color=req.color,
-            description=req.description
-        )
-        if result["success"]:
-            update_factory_registry(result["agent_id"], req.name, req.role)
-    
+        try:
+            profile = create_agent(
+                name=req.name,
+                role=req.role,
+                is_master=False
+            )
+            result = {"success": True, "agent_id": profile["agent_id"], "profile": profile}
+        except Exception as e:
+            result = {"success": False, "message": str(e)}
+
     return result
 
 

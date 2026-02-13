@@ -234,9 +234,32 @@ def create_agent(name: str, role: str = "general", is_master: bool = False) -> d
 # 편의 함수
 # ═══════════════════════════════════════════════════════
 
+def create_master_agent(name: str) -> dict:
+    """마스터 에이전트 생성 (API용 래퍼)."""
+    try:
+        profile = create_agent(name, role="master_controller", is_master=True)
+        return {"success": True, "agent_id": profile["agent_id"], "profile": profile}
+    except ValueError as e:
+        return {"success": False, "message": str(e)}
+
+
 def list_agents() -> list:
     """등록된 전체 에이전트 목록."""
     return _load_registry().get("agents", [])
+
+
+def get_agent(agent_id: str):
+    """에이전트 프로필 반환."""
+    profile_path = os.path.join(_AGENTS_DIR, agent_id, "profile.json")
+    if os.path.isfile(profile_path):
+        with open(profile_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
+def update_factory_registry(agent_id: str, name: str, role: str):
+    """외부 호출용 레지스트리 업데이트 (create_agent 내부에서 이미 처리됨)."""
+    pass
 
 
 def get_master_id() -> str:
