@@ -1,0 +1,28 @@
+{
+  "agent_id": "A0009",
+  "name": "이름",
+  "role": "역할",
+  "level": 1,
+  "status": "online",
+  "equipped_skills": [],
+  "stats": {
+    "INT": 1,
+    "MEM": 1,
+    "SPD": 1,
+    "REL": 1
+  },
+  "connections": [],
+  "learning": {
+    "total_tasks": 0,
+    "tasks_completed": 0,
+    "tasks_failed": 0,
+    "error_rate": 0.0
+  },
+  "metadata": {
+    "description": "",
+    "tags": [],
+    "icon": "◇"
+  },
+  "created_at": "2026-02-13T09:28:12Z",
+  "protocol": "CHUNSIK_PROTOCOL_v1.0"
+}

@@ -24,7 +24,15 @@
       "level": 1,
       "status": "online",
       "created_at": "2026-02-13T08:56:48Z"
+    },
+    {
+      "agent_id": "A0009",
+      "name": "이름",
+      "role": "역할",
+      "level": 1,
+      "status": "online",
+      "created_at": "2026-02-13T09:28:12Z"
     }
   ],
-  "updated": "2026-02-13T09:20:11Z"
+  "updated": "2026-02-13T09:28:12Z"
 }
