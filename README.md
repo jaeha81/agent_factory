@@ -129,3 +129,25 @@ scripts\install_shortcuts_windows.bat
 - 서버 종료: 터미널에서 `Ctrl+C`
 - 자동 저장: `run_api_auto_save.bat` 사용 시에만 종료 후 자동 커밋+푸시
 - 수동 저장: `scripts\save_and_push.bat "메시지"` (메시지 생략 시 자동 타임스탬프)
+
+## 커스텀 스킬 추가
+
+`skills_library/skills/` 디렉토리에 JSON 파일을 추가하면 API 서버 시작 시 자동으로 로드됩니다.
+
+```
+skills_library/skills/<skill_id>.skill.json
+```
+
+필수 필드: `skill_id`, `name`, `description`, `prompt`
+
+```json
+{
+  "skill_id": "my_skill",
+  "name": "My Skill",
+  "description": "What this skill does",
+  "prompt": "System prompt for the skill"
+}
+```
+
+GitHub에 커밋하면 다른 PC에서 clone/pull만으로 동일한 스킬을 사용할 수 있습니다.
+자세한 스키마는 `skills_library/README.md` 참고.

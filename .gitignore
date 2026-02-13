@@ -1,7 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
-skills_library/
+skills_library/_cache/
 nul
 .claude/settings.local.json
 ._backup/

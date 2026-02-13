@@ -17,6 +17,9 @@ from typing import Optional, List
 FACTORY_ROOT = Path(__file__).parent.parent
 AGENTS_DIR = FACTORY_ROOT / "agents"
 SKILLS_LIBRARY = FACTORY_ROOT / "skills_library"
+SKILLS_JSON_DIR = SKILLS_LIBRARY / "skills"
+
+_REQUIRED_SKILL_FIELDS = {"skill_id", "name", "description"}
 
 
 # ─── 기본 스킬 템플릿 ────────────────────────────────
@@ -101,11 +104,13 @@ class SkillsManager:
     
     def __init__(self):
         self._ensure_library()
-    
+        self._json_skills = self._load_json_skills()
+
     def _ensure_library(self):
         """스킬 라이브러리 초기화"""
         SKILLS_LIBRARY.mkdir(parents=True, exist_ok=True)
-        
+        SKILLS_JSON_DIR.mkdir(parents=True, exist_ok=True)
+
         catalog_path = SKILLS_LIBRARY / "catalog.json"
         if not catalog_path.exists():
             catalog = {
@@ -117,10 +122,35 @@ class SkillsManager:
             }
             with open(catalog_path, "w", encoding="utf-8") as f:
                 json.dump(catalog, f, ensure_ascii=False, indent=2)
-    
+
+    def _load_json_skills(self) -> dict:
+        """skills_library/skills/*.skill.json 파일에서 스킬 로드"""
+        loaded = {}
+        for fpath in sorted(SKILLS_JSON_DIR.glob("*.skill.json")):
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                missing = _REQUIRED_SKILL_FIELDS - set(data.keys())
+                if missing:
+                    print(f"[WARN] Skipping {fpath.name}: missing fields {missing}")
+                    continue
+                loaded[data["skill_id"]] = data
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"[WARN] Skipping {fpath.name}: {e}")
+        return loaded
+
+    def _resolve_skill(self, skill_id: str) -> Optional[dict]:
+        """JSON 라이브러리 → 하드코딩 템플릿 순으로 스킬 조회"""
+        if skill_id in self._json_skills:
+            return self._json_skills[skill_id]
+        if skill_id in SKILL_TEMPLATES:
+            return SKILL_TEMPLATES[skill_id]
+        return None
+
     def list_available_skills(self) -> List[dict]:
-        """사용 가능한 스킬 전체 목록"""
-        return list(SKILL_TEMPLATES.values())
+        """사용 가능한 스킬 전체 목록 (하드코딩 + JSON, JSON이 우선)"""
+        merged = {**SKILL_TEMPLATES, **self._json_skills}
+        return list(merged.values())
     
     def equip_skill(self, agent_id: str, skill_id: str) -> dict:
         """에이전트에 스킬 장착"""
@@ -132,18 +162,19 @@ class SkillsManager:
             return {"success": False, "message": f"에이전트 '{agent_id}'를 찾을 수 없습니다."}
         
         # 스킬 존재 확인
-        if skill_id not in SKILL_TEMPLATES:
+        resolved = self._resolve_skill(skill_id)
+        if resolved is None:
             return {"success": False, "message": f"스킬 '{skill_id}'이(가) 라이브러리에 없습니다."}
-        
+
         # 프로필 로드
         with open(profile_path, "r", encoding="utf-8") as f:
             profile = json.load(f)
-        
+
         # 이미 장착 확인
         equipped_ids = [s["skill_id"] for s in profile.get("equipped_skills", [])]
         if skill_id in equipped_ids:
             return {"success": False, "message": f"스킬 '{skill_id}'은(는) 이미 장착되어 있습니다."}
-        
+
         # 장착 가능 수 확인
         config_path = agent_path / "config.yaml"
         max_skills = 10
@@ -152,12 +183,12 @@ class SkillsManager:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
             max_skills = config.get("skills", {}).get("max_equipped", 10)
-        
+
         if len(equipped_ids) >= max_skills:
             return {"success": False, "message": f"최대 장착 가능 스킬 수({max_skills})에 도달했습니다."}
-        
+
         # 유료 여부 확인
-        skill_data = SKILL_TEMPLATES[skill_id].copy()
+        skill_data = resolved.copy()
         if skill_data.get("cost") != "free":
             return {
                 "success": False,
@@ -170,7 +201,9 @@ class SkillsManager:
         profile["equipped_skills"].append(skill_data)
         
         # 스킬 파일 복사
-        skill_file = agent_path / "skills" / f"{skill_id}.skill.json"
+        skills_dir = agent_path / "skills"
+        skills_dir.mkdir(parents=True, exist_ok=True)
+        skill_file = skills_dir / f"{skill_id}.skill.json"
         with open(skill_file, "w", encoding="utf-8") as f:
             json.dump(skill_data, f, ensure_ascii=False, indent=2)
         

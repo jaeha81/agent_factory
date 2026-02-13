@@ -1,0 +1,89 @@
+{
+  "name": "JH Skills Library",
+  "version": "1.0.0",
+  "skills": {
+    "log_analyzer": {
+      "skill_id": "log_analyzer",
+      "name": "로그 분석기",
+      "description": "에이전트 로그를 분석하여 패턴과 이상을 감지",
+      "category": "monitoring",
+      "version": "1.0.0",
+      "dependencies": [
+        "pandas"
+      ],
+      "cost": "free"
+    },
+    "api_reconnector": {
+      "skill_id": "api_reconnector",
+      "name": "API 재연결기",
+      "description": "API 연결 실패 시 자동 재시도 및 복구",
+      "category": "network",
+      "version": "1.0.0",
+      "dependencies": [],
+      "cost": "free"
+    },
+    "agent_builder": {
+      "skill_id": "agent_builder",
+      "name": "에이전트 생성기",
+      "description": "새로운 에이전트를 생성하는 핵심 스킬",
+      "category": "factory",
+      "version": "1.0.0",
+      "dependencies": [],
+      "cost": "free"
+    },
+    "resource_monitor": {
+      "skill_id": "resource_monitor",
+      "name": "리소스 모니터",
+      "description": "CPU, 메모리, 스토리지 사용량 모니터링",
+      "category": "monitoring",
+      "version": "1.0.0",
+      "dependencies": [
+        "psutil"
+      ],
+      "cost": "free"
+    },
+    "data_processor": {
+      "skill_id": "data_processor",
+      "name": "데이터 처리기",
+      "description": "CSV, JSON, 텍스트 데이터 파싱 및 변환",
+      "category": "data",
+      "version": "1.0.0",
+      "dependencies": [
+        "pandas",
+        "numpy"
+      ],
+      "cost": "free"
+    },
+    "nlp_basic": {
+      "skill_id": "nlp_basic",
+      "name": "기본 자연어 처리",
+      "description": "텍스트 분석, 키워드 추출, 감정 분석",
+      "category": "ai",
+      "version": "1.0.0",
+      "dependencies": [
+        "spacy"
+      ],
+      "cost": "free"
+    },
+    "scheduler": {
+      "skill_id": "scheduler",
+      "name": "작업 스케줄러",
+      "description": "주기적 작업 예약 및 실행",
+      "category": "automation",
+      "version": "1.0.0",
+      "dependencies": [],
+      "cost": "free"
+    },
+    "memory_compressor": {
+      "skill_id": "memory_compressor",
+      "name": "메모리 압축기",
+      "description": "메모리 데이터를 요약·압축하여 효율적 저장",
+      "category": "memory",
+      "version": "1.0.0",
+      "dependencies": [],
+      "cost": "free"
+    }
+  },
+  "total_skills": 8,
+  "last_updated": "2026-02-13T14:42:45.458123"
+}
