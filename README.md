@@ -96,3 +96,36 @@ agent_factory/
 ├── prompts/                   # 런타임 프롬프트 템플릿
 └── docs/                      # 문서
 ```
+
+---
+
+## 원클릭 실행 (Windows)
+
+### 기본 실행
+```
+scripts\run_api.bat
+```
+
+### 추천: 종료 시 자동 저장+푸시
+```
+scripts\run_api_auto_save.bat
+```
+서버 실행 → `Ctrl+C`로 종료 → 커밋 메시지 입력(Enter=자동) → `git add/commit/push` 자동 수행
+
+## 바탕화면 바로가기 설치 (Windows)
+
+아래 명령 1회 실행하면 바탕화면에 아이콘 2개가 생성됩니다:
+```
+scripts\install_shortcuts_windows.bat
+```
+
+| 바로가기 | 동작 |
+|----------|------|
+| **AgentFactory - Run(API+AutoSave)** | 서버 실행 + 종료 시 자동 저장 |
+| **AgentFactory - Save+Push** | 즉시 저장+푸시 |
+
+## 종료
+
+- 서버 종료: 터미널에서 `Ctrl+C`
+- 자동 저장: `run_api_auto_save.bat` 사용 시에만 종료 후 자동 커밋+푸시
+- 수동 저장: `scripts\save_and_push.bat "메시지"` (메시지 생략 시 자동 타임스탬프)
