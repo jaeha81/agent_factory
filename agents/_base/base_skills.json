@@ -1,0 +1,27 @@
+{
+  "description": "에이전트 생성 시 자동으로 장착되는 기본 스킬 목록",
+  "version": "1.0.0",
+  "auto_equip": true,
+  "skills": [
+    {
+      "skill_id": "filesystem",
+      "source": "skills_library/core/filesystem.skill.json",
+      "reason": "모든 에이전트는 레포 내 파일 읽기/쓰기/검색 필요"
+    },
+    {
+      "skill_id": "terminal",
+      "source": "skills_library/core/terminal.skill.json",
+      "reason": "로컬 명령 실행 능력 기본 제공"
+    },
+    {
+      "skill_id": "git",
+      "source": "skills_library/core/git.skill.json",
+      "reason": "Git 워크플로우 기본 탑재"
+    },
+    {
+      "skill_id": "coding",
+      "source": "skills_library/core/coding.skill.json",
+      "reason": "코드 작성/리팩토링/디버깅 기본 능력"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "skill_id": "coding",
+  "name": "코딩 어시스턴트",
+  "version": "1.0.0",
+  "description": "코드 작성, 리팩토링, 디버깅, 테스트 생성 기능. 레포 컨벤션을 준수하며 안전한 코드를 작성한다.",
+  "category": "coding",
+  "dependencies": [],
+  "cost": "free",
+  "inputs": [
+    {"name": "action", "type": "string", "description": "수행할 작업: write | refactor | debug | test | review", "required": true},
+    {"name": "target_file", "type": "string", "description": "대상 파일 경로", "required": true},
+    {"name": "instruction", "type": "string", "description": "구체적인 작업 지시", "required": true},
+    {"name": "language", "type": "string", "description": "프로그래밍 언어 (auto-detect 가능)", "required": false}
+  ],
+  "outputs": [
+    {"name": "code", "type": "string", "description": "생성/수정된 코드"},
+    {"name": "diff", "type": "string", "description": "변경 사항 diff"},
+    {"name": "success", "type": "boolean", "description": "성공 여부"},
+    {"name": "notes", "type": "string", "description": "변경 설명 및 주의사항"}
+  ],
+  "safety_rules": [
+    "OWASP Top 10 취약점(SQL injection, XSS, command injection 등) 코드 작성 금지",
+    "하드코딩된 비밀키, 비밀번호, 토큰 금지 — 환경변수 또는 설정파일 참조",
+    "기존 코드 스타일(들여쓰기, 네이밍 규칙)을 준수",
+    "변경 전 원본 파일 백업 권장",
+    "테스트 없는 기능 코드 작성 시 최소 1개 테스트 케이스 함께 생성 권장",
+    "eval(), exec(), __import__() 등 동적 코드 실행 최소화"
+  ],
+  "examples": [
+    {
+      "description": "함수 리팩토링",
+      "input": {"action": "refactor", "target_file": "core/agent_creator.py", "instruction": "create_agent 함수에서 중복 로직 추출"},
+      "expected_output": {"code": "<리팩토링된 코드>", "diff": "<변경 diff>", "success": true, "notes": "헬퍼 함수 2개 추출"}
+    },
+    {
+      "description": "단위 테스트 생성",
+      "input": {"action": "test", "target_file": "core/executor.py", "instruction": "safe_run 함수의 allowlist 검증 테스트"},
+      "expected_output": {"code": "<테스트 코드>", "diff": "", "success": true, "notes": "pytest 기반, 5개 테스트 케이스"}
+    }
+  ],
+  "prompt": "너는 코딩 어시스턴트 스킬이다. 안전하고 깔끔한 코드를 작성하라. OWASP 취약점을 피하고, 레포 컨벤션을 따르며, 변경사항을 명확히 설명하라."
+}

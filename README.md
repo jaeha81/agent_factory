@@ -86,16 +86,44 @@ agent_factory/
 ├── requirements.txt           # Python 의존성
 ├── scripts/
 │   ├── run_api.bat / .sh      # 원클릭 서버 실행
-│   └── save_and_push.bat / .sh # 원클릭 저장+푸시
+│   ├── save_and_push.bat / .sh # 원클릭 저장+푸시
+│   └── test_executor.py       # Executor 테스트 시나리오
 ├── core/                      # 코어 모듈
-│   ├── agent_creator.py       # 에이전트 생성
+│   ├── agent_creator.py       # 에이전트 생성 (기본 스킬 자동 주입)
 │   ├── skills_manager.py      # 스킬 관리
 │   ├── prompt_injector.py     # 프롬프트 주입
-│   └── factory_config.yaml
+│   ├── executor.py            # 로컬 실행기 (safe_run, file I/O, git_ops)
+│   └── logger.py              # 통합 JSONL 로거
 ├── agents/                    # 생성된 에이전트 데이터
+│   └── _base/                 # 기본 에이전트 템플릿 (자동 주입)
+│       ├── base_instructions.md   # 보안/정직/실행가능성/Git 규칙
+│       ├── base_skills.json       # 기본 스킬팩 (filesystem, terminal, git, coding)
+│       └── memory_policy.md       # 요약 메모리 규칙
+├── skills_library/            # 스킬 저장소
+│   ├── schema.skill.json      # 스킬 JSON 표준 스키마
+│   ├── core/                  # 기본 스킬팩 (모든 에이전트에 자동 장착)
+│   │   ├── filesystem.skill.json  # 파일 읽기/쓰기/검색
+│   │   ├── terminal.skill.json    # 안전한 명령 실행 (allowlist)
+│   │   ├── git.skill.json         # Git 작업 + 민감정보 스캔
+│   │   └── coding.skill.json      # 코드 작성/리팩토링/디버깅
+│   └── skills/                # 커스텀 추가 스킬
 ├── prompts/                   # 런타임 프롬프트 템플릿
-└── docs/                      # 문서
+├── logs/                      # 팩토리 실행 로그 (JSONL 형식)
+└── docs/                      # 문서 (git_policy.md 포함)
 ```
+
+## 핵심 아키텍처
+
+| 컴포넌트 | 위치 | 역할 |
+|----------|------|------|
+| **스킬 저장소** | `skills_library/` | 표준 스키마 기반 스킬 JSON 보관. `core/`에 기본 4종, `skills/`에 커스텀 |
+| **기본 템플릿** | `agents/_base/` | 모든 에이전트 생성 시 자동 주입되는 지침·스킬·메모리 정책 |
+| **실행기** | `core/executor.py` | allowlist 기반 명령 실행, 파일 I/O, Git 작업, 민감정보 스캔 |
+| **JSONL 로거** | `core/logger.py` | 모든 실행 이벤트를 `logs/*.jsonl`에 구조화 기록 |
+| **스킬 매니저** | `core/skills_manager.py` | 에이전트별 스킬 장착/해제/조회 |
+| **프롬프트 주입** | `core/prompt_injector.py` | 템플릿 변수 치환 → system_prompt.md 생성 |
+| **에이전트 생성** | `core/agent_creator.py` | ID 발급 → 폴더 생성 → 기본 스킬 주입 → 프롬프트 생성 → 등록 |
+| **Git 정책** | `docs/git_policy.md` | 브랜치 전략, 커밋 규칙, 민감정보 스캔, 금지 명령 목록 |
 
 ---
 

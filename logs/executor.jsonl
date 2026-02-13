@@ -1,0 +1,24 @@
+{"task_id": "b6a59e20", "action": "safe_run", "command": "echo hello", "result": "OK", "returncode": 0, "error": null, "rollback": false, "timestamp": "2026-02-13T12:57:39Z"}
+{"task_id": "337f7c34", "action": "safe_run", "command": "rm -rf /", "result": "BLOCKED", "reason": "차단된 명령 패턴: \\brm\\s+(-[a-zA-Z]*r[a-zA-Z]*f|--recursive\\s+--force|-[a-zA-Z]*f[a-zA-Z]*r)\\b", "error": null, "rollback": false, "timestamp": "2026-02-13T12:57:39Z"}
+{"task_id": "1f0fa117", "action": "safe_run", "command": "curl http://example.com", "result": "BLOCKED", "reason": "허용되지 않은 명령: curl", "error": null, "rollback": false, "timestamp": "2026-02-13T12:57:39Z"}
+{"task_id": "cdebe22e", "action": "safe_run", "command": "python -c \"import time; time.sleep(5)\"", "result": "TIMEOUT", "error": "타임아웃 1초 초과", "rollback": false, "timestamp": "2026-02-13T12:57:40Z"}
+{"task_id": "014004be", "action": "safe_run", "command": "git push --force origin main", "result": "BLOCKED", "reason": "차단된 명령 패턴: \\bgit\\s+push\\s+--force\\b", "error": null, "rollback": false, "timestamp": "2026-02-13T12:57:40Z"}
+{"task_id": "c487c92c", "action": "safe_run", "command": "git reset --hard HEAD", "result": "BLOCKED", "reason": "차단된 명령 패턴: \\bgit\\s+reset\\s+--hard\\b", "error": null, "rollback": false, "timestamp": "2026-02-13T12:57:40Z"}
+{"task_id": "fd5d2cfe", "action": "read_file", "path": "README.md", "result": "OK", "bytes": 4711, "timestamp": "2026-02-13T12:57:40Z"}
+{"task_id": "9e7ec4e9", "action": "read_file", "path": ".env", "result": "BLOCKED", "reason": "민감 파일", "timestamp": "2026-02-13T12:57:40Z"}
+{"task_id": "110de123", "action": "read_file", "path": "../../etc/passwd", "result": "BLOCKED", "reason": "접근 금지: 레포 외부 경로입니다 — ../../etc/passwd", "timestamp": "2026-02-13T12:57:40Z"}
+{"task_id": "6e11d06f", "action": "write_file", "path": "logs/_test_write_temp.txt", "result": "OK", "bytes": 18, "timestamp": "2026-02-13T12:57:40Z"}
+{"task_id": "3e23d8e1", "action": "read_file", "path": "logs/_test_write_temp.txt", "result": "OK", "bytes": 18, "timestamp": "2026-02-13T12:57:40Z"}
+{"task_id": "69916ae2", "action": "git_status", "args": [], "result": "OK", "returncode": 0, "timestamp": "2026-02-13T12:57:40Z"}
+{"task_id": "a43dc8df", "action": "safe_run", "command": "echo hello", "result": "OK", "returncode": 0, "error": null, "rollback": false, "timestamp": "2026-02-13T12:58:13Z"}
+{"task_id": "7b1a926a", "action": "safe_run", "command": "rm -rf /", "result": "BLOCKED", "reason": "차단된 명령 패턴: \\brm\\s+(-[a-zA-Z]*r[a-zA-Z]*f|--recursive\\s+--force|-[a-zA-Z]*f[a-zA-Z]*r)\\b", "error": null, "rollback": false, "timestamp": "2026-02-13T12:58:13Z"}
+{"task_id": "8c2d47fa", "action": "safe_run", "command": "curl http://example.com", "result": "BLOCKED", "reason": "허용되지 않은 명령: curl", "error": null, "rollback": false, "timestamp": "2026-02-13T12:58:13Z"}
+{"task_id": "64f9c7e3", "action": "safe_run", "command": "python -c \"import time; time.sleep(5)\"", "result": "TIMEOUT", "error": "타임아웃 1초 초과", "rollback": false, "timestamp": "2026-02-13T12:58:14Z"}
+{"task_id": "6f49e77d", "action": "safe_run", "command": "git push --force origin main", "result": "BLOCKED", "reason": "차단된 명령 패턴: \\bgit\\s+push\\s+--force\\b", "error": null, "rollback": false, "timestamp": "2026-02-13T12:58:14Z"}
+{"task_id": "a861da18", "action": "safe_run", "command": "git reset --hard HEAD", "result": "BLOCKED", "reason": "차단된 명령 패턴: \\bgit\\s+reset\\s+--hard\\b", "error": null, "rollback": false, "timestamp": "2026-02-13T12:58:14Z"}
+{"task_id": "ff51a7e6", "action": "read_file", "path": "README.md", "result": "OK", "bytes": 4711, "timestamp": "2026-02-13T12:58:14Z"}
+{"task_id": "e3b7b96f", "action": "read_file", "path": ".env", "result": "BLOCKED", "reason": "민감 파일", "timestamp": "2026-02-13T12:58:14Z"}
+{"task_id": "6a4f2af4", "action": "read_file", "path": "../../etc/passwd", "result": "BLOCKED", "reason": "접근 금지: 레포 외부 경로입니다 — ../../etc/passwd", "timestamp": "2026-02-13T12:58:14Z"}
+{"task_id": "dcce3827", "action": "write_file", "path": "logs/_test_write_temp.txt", "result": "OK", "bytes": 18, "timestamp": "2026-02-13T12:58:14Z"}
+{"task_id": "05dfc973", "action": "read_file", "path": "logs/_test_write_temp.txt", "result": "OK", "bytes": 18, "timestamp": "2026-02-13T12:58:14Z"}
+{"task_id": "378b529d", "action": "git_status", "args": [], "result": "OK", "returncode": 0, "timestamp": "2026-02-13T12:58:14Z"}

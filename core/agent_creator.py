@@ -39,6 +39,10 @@ from core.prompt_injector import inject_and_save
 _AGENTS_DIR = os.path.join(_PROJECT_ROOT, "agents")
 _REGISTRY_PATH = os.path.join(_PROJECT_ROOT, "core", "registry.json")
 _FACTORY_LOG = os.path.join(_PROJECT_ROOT, "logs", "activity.log")
+_BASE_DIR = os.path.join(_AGENTS_DIR, "_base")
+_BASE_SKILLS_PATH = os.path.join(_BASE_DIR, "base_skills.json")
+_BASE_INSTRUCTIONS_PATH = os.path.join(_BASE_DIR, "base_instructions.md")
+_SKILLS_LIBRARY_CORE = os.path.join(_PROJECT_ROOT, "skills_library", "core")
 
 
 # ═══════════════════════════════════════════════════════
@@ -99,6 +103,80 @@ def _write_text(filepath: str, text: str):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(text)
+
+
+# ═══════════════════════════════════════════════════════
+# 기본 스킬/지침 주입
+# ═══════════════════════════════════════════════════════
+
+def _inject_base_skills(agent_dir: str, profile: dict) -> list:
+    """
+    agents/_base/base_skills.json에 정의된 기본 스킬을
+    에이전트의 skills/ 폴더에 복사하고 profile에 추가.
+    """
+    if not os.path.isfile(_BASE_SKILLS_PATH):
+        return []
+
+    with open(_BASE_SKILLS_PATH, "r", encoding="utf-8") as f:
+        base_config = json.load(f)
+
+    if not base_config.get("auto_equip"):
+        return []
+
+    injected = []
+    skills_dir = os.path.join(agent_dir, "skills")
+    os.makedirs(skills_dir, exist_ok=True)
+
+    for entry in base_config.get("skills", []):
+        skill_id = entry["skill_id"]
+        source_path = os.path.join(_PROJECT_ROOT, entry["source"])
+
+        if not os.path.isfile(source_path):
+            continue
+
+        # 스킬 JSON 로드
+        with open(source_path, "r", encoding="utf-8") as f:
+            skill_data = json.load(f)
+
+        # 에이전트 skills/ 폴더에 복사
+        dest_path = os.path.join(skills_dir, f"{skill_id}.skill.json")
+        skill_data["equipped_at"] = _now_iso()
+        with open(dest_path, "w", encoding="utf-8") as f:
+            json.dump(skill_data, f, ensure_ascii=False, indent=2)
+
+        # profile에 스킬 정보 추가 (간략 버전)
+        profile["equipped_skills"].append({
+            "skill_id": skill_data["skill_id"],
+            "name": skill_data["name"],
+            "description": skill_data.get("description", ""),
+            "category": skill_data.get("category", ""),
+            "version": skill_data.get("version", "1.0.0"),
+            "cost": skill_data.get("cost", "free"),
+            "equipped_at": skill_data["equipped_at"],
+        })
+        injected.append(skill_id)
+
+    return injected
+
+
+def _inject_base_instructions(agent_dir: str):
+    """
+    agents/_base/base_instructions.md 내용을
+    에이전트의 system_prompt.md 끝에 추가 주입.
+    """
+    if not os.path.isfile(_BASE_INSTRUCTIONS_PATH):
+        return
+
+    prompt_path = os.path.join(agent_dir, "system_prompt.md")
+    if not os.path.isfile(prompt_path):
+        return
+
+    with open(_BASE_INSTRUCTIONS_PATH, "r", encoding="utf-8") as f:
+        base_text = f.read()
+
+    with open(prompt_path, "a", encoding="utf-8") as f:
+        f.write("\n\n<!-- ═══ BASE INSTRUCTIONS (auto-injected) ═══ -->\n")
+        f.write(base_text)
 
 
 # ═══════════════════════════════════════════════════════
@@ -191,7 +269,12 @@ def create_agent(name: str, role: str = "general", is_master: bool = False) -> d
     )
     _write_text(os.path.join(agent_dir, "config.yaml"), config_text)
 
-    # ── 5. system_prompt.md (prompt_injector 호출) ──
+    # ── 5. 기본 스킬 자동 주입 (base_skills.json → skills/) ──
+    injected_skills = _inject_base_skills(agent_dir, profile)
+    if injected_skills:
+        _write_json(os.path.join(agent_dir, "profile.json"), profile)
+
+    # ── 6. system_prompt.md (prompt_injector 호출) ──
     master_id = ""
     if not is_master:
         # 레지스트리에서 마스터 ID 조회
@@ -209,11 +292,15 @@ def create_agent(name: str, role: str = "general", is_master: bool = False) -> d
         master_agent_id=master_id,
     )
 
-    # ── 6. agents/{id}/logs/creation.log ──
-    creation_log = os.path.join(agent_dir, "logs", "creation.log")
-    _append_line(creation_log, f"[{now}] AGENT_CREATED id={agent_id} name={name} role={role} level={level}")
+    # ── 6.1. base_instructions.md를 system_prompt.md에 추가 주입 ──
+    _inject_base_instructions(agent_dir)
 
-    # ── 7. core/registry.json 등록 ──
+    # ── 8. agents/{id}/logs/creation.log ──
+    creation_log = os.path.join(agent_dir, "logs", "creation.log")
+    skills_str = ",".join(s["skill_id"] for s in profile.get("equipped_skills", []))
+    _append_line(creation_log, f"[{now}] AGENT_CREATED id={agent_id} name={name} role={role} level={level} base_skills=[{skills_str}]")
+
+    # ── 9. core/registry.json 등록 ──
     registry["agents"].append({
         "agent_id": agent_id,
         "name": name,
@@ -224,8 +311,8 @@ def create_agent(name: str, role: str = "general", is_master: bool = False) -> d
     })
     _save_registry(registry)
 
-    # ── 8. logs/activity.log 기록 ──
-    _append_line(_FACTORY_LOG, f"[{now}] AGENT_CREATED id={agent_id} name={name} role={role}")
+    # ── 10. logs/activity.log 기록 ──
+    _append_line(_FACTORY_LOG, f"[{now}] AGENT_CREATED id={agent_id} name={name} role={role} base_skills=[{skills_str}]")
 
     return profile
 

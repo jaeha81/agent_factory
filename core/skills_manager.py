@@ -18,6 +18,7 @@ FACTORY_ROOT = Path(__file__).parent.parent
 AGENTS_DIR = FACTORY_ROOT / "agents"
 SKILLS_LIBRARY = FACTORY_ROOT / "skills_library"
 SKILLS_JSON_DIR = SKILLS_LIBRARY / "skills"
+SKILLS_CORE_DIR = SKILLS_LIBRARY / "core"
 
 _REQUIRED_SKILL_FIELDS = {"skill_id", "name", "description"}
 
@@ -124,19 +125,24 @@ class SkillsManager:
                 json.dump(catalog, f, ensure_ascii=False, indent=2)
 
     def _load_json_skills(self) -> dict:
-        """skills_library/skills/*.skill.json 파일에서 스킬 로드"""
+        """skills_library/skills/*.skill.json + skills_library/core/*.skill.json 로드"""
         loaded = {}
-        for fpath in sorted(SKILLS_JSON_DIR.glob("*.skill.json")):
-            try:
-                with open(fpath, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                missing = _REQUIRED_SKILL_FIELDS - set(data.keys())
-                if missing:
-                    print(f"[WARN] Skipping {fpath.name}: missing fields {missing}")
-                    continue
-                loaded[data["skill_id"]] = data
-            except (json.JSONDecodeError, KeyError) as e:
-                print(f"[WARN] Skipping {fpath.name}: {e}")
+        # core/ 기본 스킬팩 + skills/ 커스텀 스킬 모두 로드 (core 먼저, skills가 오버라이드)
+        dirs = [SKILLS_CORE_DIR, SKILLS_JSON_DIR]
+        for skill_dir in dirs:
+            if not skill_dir.exists():
+                continue
+            for fpath in sorted(skill_dir.glob("*.skill.json")):
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    missing = _REQUIRED_SKILL_FIELDS - set(data.keys())
+                    if missing:
+                        print(f"[WARN] Skipping {fpath.name}: missing fields {missing}")
+                        continue
+                    loaded[data["skill_id"]] = data
+                except (json.JSONDecodeError, KeyError) as e:
+                    print(f"[WARN] Skipping {fpath.name}: {e}")
         return loaded
 
     def _resolve_skill(self, skill_id: str) -> Optional[dict]:

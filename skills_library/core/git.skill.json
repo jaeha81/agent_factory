@@ -1,0 +1,45 @@
+{
+  "skill_id": "git",
+  "name": "Git 작업 관리",
+  "version": "1.0.0",
+  "description": "브랜치 관리, 커밋, 상태 조회, 민감정보 스캔을 수행한다. 위험 명령(force push, reset --hard 등)을 차단한다.",
+  "category": "git",
+  "dependencies": [],
+  "cost": "free",
+  "inputs": [
+    {"name": "action", "type": "string", "description": "수행할 Git 작업: status | diff | log | branch | commit | add | checkout | fetch | pull | push", "required": true},
+    {"name": "args", "type": "array", "description": "Git 명령 인자 목록", "required": false},
+    {"name": "message", "type": "string", "description": "커밋 메시지 (commit 시 필수)", "required": false}
+  ],
+  "outputs": [
+    {"name": "result", "type": "string", "description": "Git 명령 출력"},
+    {"name": "success", "type": "boolean", "description": "성공 여부"},
+    {"name": "scan_warnings", "type": "array", "description": "민감정보 스캔 경고 목록"}
+  ],
+  "safety_rules": [
+    "커밋 전 자동으로 민감정보 스캔 수행 (API_KEY, SECRET, PASSWORD, TOKEN 패턴)",
+    "금지 명령: push --force, reset --hard, clean -fd, branch -D main/master, rebase -i",
+    "main/master 브랜치에 직접 push 금지",
+    ".env, *.pem, *.key 파일이 staged 상태이면 커밋 차단",
+    "커밋 메시지가 비어있으면 차단",
+    "push 실패 시 최대 4회 재시도 (2s, 4s, 8s, 16s 지수 백오프)"
+  ],
+  "examples": [
+    {
+      "description": "상태 확인",
+      "input": {"action": "status"},
+      "expected_output": {"result": "On branch main\nnothing to commit", "success": true, "scan_warnings": []}
+    },
+    {
+      "description": "안전한 커밋",
+      "input": {"action": "commit", "message": "feat: add new skill"},
+      "expected_output": {"result": "[main abc1234] feat: add new skill", "success": true, "scan_warnings": []}
+    },
+    {
+      "description": "민감정보 감지",
+      "input": {"action": "commit", "message": "update config"},
+      "expected_output": {"result": "", "success": false, "scan_warnings": ["config.py:3 — API_KEY 패턴 감지"]}
+    }
+  ],
+  "prompt": "너는 Git 작업 관리 스킬이다. 안전한 Git 워크플로우를 수행하라. 커밋 전 민감정보를 스캔하고, 위험 명령(force push, reset --hard 등)은 절대 실행하지 마라."
+}
