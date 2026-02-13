@@ -2,27 +2,35 @@
 
 멀티 에이전트 생성·관리 시스템 (FastAPI + React Dashboard)
 
-## Quick Start (새 PC 재현 3줄)
+## Quick Start
 
 ```bash
 git clone https://github.com/jaeha81/agent_factory.git
 cd agent_factory
-./scripts/run_api.sh        # Git Bash / macOS / Linux
-# 또는
-scripts\run_api.bat          # Windows CMD
+python run.py --doctor   # 환경 점검 (venv 생성 + 의존성 설치 + import 테스트)
+python run.py            # API 서버 실행
+# http://127.0.0.1:8000/docs
 ```
 
-브라우저: **http://localhost:8000/docs**
-
-## 수동 설치
+### 원클릭 런처
 
 ```bash
-python -m venv .venv
-source .venv/Scripts/activate   # Windows Git Bash
-# source .venv/bin/activate     # macOS / Linux
-pip install -r requirements.txt
-python api_server.py
+# Windows CMD
+run_api.bat
+
+# Git Bash / macOS / Linux
+./run_api.sh
 ```
+
+### run.py 옵션
+
+| 옵션 | 설명 |
+|------|------|
+| `--doctor` | venv + 설치 + import 테스트 후 종료 |
+| `--host 0.0.0.0` | 바인딩 호스트 (기본 127.0.0.1) |
+| `--port 9000` | 포트 변경 (기본 8000) |
+| `--reload` | 코드 변경 시 자동 재시작 (개발용) |
+| `--no-install` | pip install 생략 |
 
 ## API 엔드포인트
 
@@ -40,6 +48,8 @@ python api_server.py
 
 ```
 agent_factory/
+├── run.py                 # 원커맨드 부트스트랩 러너
+├── run_api.bat / .sh      # OS별 런처
 ├── api_server.py          # FastAPI 서버 (port 8000)
 ├── requirements.txt       # Python 의존성
 ├── core/                  # 코어 모듈
@@ -49,6 +59,6 @@ agent_factory/
 │   └── factory_config.yaml
 ├── agents/                # 생성된 에이전트 데이터
 ├── prompts/               # 런타임 프롬프트 템플릿
-├── scripts/               # 실행·유틸 스크립트
+├── scripts/               # 유틸 스크립트
 └── docs/                  # 문서
 ```
