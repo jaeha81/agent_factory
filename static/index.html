@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JH Agent Factory — Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #080C14; overflow: hidden; }
+    #loading {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; background: #080C14;
+      color: #6366F1; font-family: 'Syne', monospace; z-index: 9999;
+    }
+    #loading .spinner {
+      width: 40px; height: 40px; border: 2px solid #1E2A3A;
+      border-top-color: #6366F1; border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>LOADING FACTORY...</div>
+  </div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useReducer, useEffect, useRef } = React;
+
+    /* ═══════════════════════════════════════════════════════
+       JH AGENT FACTORY — COMMAND CENTER DASHBOARD
+       산업형 미래주의 커맨드센터 UI
+    ═══════════════════════════════════════════════════════ */
+
+    const API = window.location.origin;
+
+    // ─── SKILL CATALOG (하드코딩 폴백, API에서도 로드) ───
+    const ICON_MAP = {
+      log_analyzer:"◉", api_reconnector:"⟳", agent_builder:"⬡",
+      resource_monitor:"▦", data_processor:"⟐", nlp_basic:"◬",
+      scheduler:"◷", memory_compressor:"◈", example_echo:"↻",
+    };
+    const CAT_COLOR = {
+      monitoring:"#06B6D4", network:"#FB923C", factory:"#6366F1",
+      data:"#34D399", ai:"#A78BFA", automation:"#FBBF24",
+      memory:"#F472B6", utility:"#64748B", custom:"#64748B",
+    };
+
+    const ROLES = [
+      { v:"general",         l:"범용 에이전트",   ic:"◇", color:"#64748B" },
+      { v:"data_analyst",    l:"데이터 분석",     ic:"▦", color:"#06B6D4" },
+      { v:"content_creator", l:"콘텐츠 생성",     ic:"◬", color:"#F472B6" },
+      { v:"monitor",         l:"모니터링",        ic:"◉", color:"#34D399" },
+      { v:"trader",          l:"트레이딩",        ic:"△", color:"#FBBF24" },
+      { v:"researcher",      l:"리서치",          ic:"⟐", color:"#A78BFA" },
+      { v:"automation",      l:"자동화",          ic:"⟳", color:"#FB923C" },
+      { v:"security",        l:"보안",            ic:"⬡", color:"#EF4444" },
+    ];
+
+    const AGENT_ICONS = ["◇","◈","◉","◬","▦","△","⬡","⟐","⟳","◷","⊕","⊗"];
+
+    // ─── ANIMATION HOOK ─────────────────────────────────
+    function useFadeIn(delay = 0) {
+      const [vis, setVis] = useState(false);
+      useEffect(() => { const t = setTimeout(() => setVis(true), delay); return () => clearTimeout(t); }, [delay]);
+      return { opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(12px)", transition: `all 0.5s cubic-bezier(.16,1,.3,1) ${delay}ms` };
+    }
+
+    // ─── MICRO COMPONENTS ───────────────────────────────
+    const Glow = ({ color, size = 200, top, left, right, bottom }) => (
+      <div style={{ position:"absolute", width:size, height:size, borderRadius:"50%",
+        background:`radial-gradient(circle, ${color}15 0%, transparent 70%)`,
+        top, left, right, bottom, pointerEvents:"none", filter:"blur(40px)" }} />
+    );
+
+    const StatBar = ({ label, value, max = 10, color }) => (
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+        <span style={{ width:32, fontSize:10, color:"#6B7A90", fontWeight:600, letterSpacing:"0.08em" }}>{label}</span>
+        <div style={{ flex:1, height:6, borderRadius:3, background:"#1A2030", overflow:"hidden" }}>
+          <div style={{ width:`${(value/max)*100}%`, height:"100%", borderRadius:3,
+            background:`linear-gradient(90deg, ${color}, ${color}88)`,
+            transition:"width 0.8s cubic-bezier(.16,1,.3,1)",
+            boxShadow:`0 0 8px ${color}44` }} />
+        </div>
+        <span style={{ width:20, fontSize:11, fontWeight:700, textAlign:"right", color }}>{value}</span>
+      </div>
+    );
+
+    const Badge = ({ children, color = "#6B7A90" }) => (
+      <span style={{ display:"inline-flex", alignItems:"center", gap:3, padding:"3px 10px", borderRadius:6,
+        fontSize:10, fontWeight:600, letterSpacing:"0.04em",
+        background: color + "14", border:`1px solid ${color}33`, color }}>
+        {children}
+      </span>
+    );
+
+    const IconBtn = ({ children, onClick, active, color = "#6B7A90" }) => (
+      <button onClick={onClick}
+        style={{ padding:"6px 14px", borderRadius:8,
+          border: active ? `1.5px solid ${color}` : "1.5px solid #1E2A3A",
+          background: active ? color + "14" : "transparent",
+          color: active ? color : "#6B7A90",
+          cursor:"pointer", fontSize:12, fontFamily:"inherit",
+          display:"flex", alignItems:"center", gap:5,
+          transition:"all 0.2s" }}>
+        {children}
+      </button>
+    );
+
+    // ─── MAIN APP ───────────────────────────────────────
+    function AgentFactory() {
+      const [agents, setAgents] = useState([]);
+      const [skills, setSkills] = useState([]);
+      const [sysLogs, setSysLogs] = useState([{ t: Date.now(), msg: "시스템 부팅 — JH Agent Factory v1.0", lv: "sys" }]);
+      const [view, setView] = useState("home");
+      const [sel, setSel] = useState(null);
+      const [logOpen, setLogOpen] = useState(true);
+      const [chatMsg, setChatMsg] = useState("");
+      const logRef = useRef(null);
+
+      const addLog = (msg, lv="info") => setSysLogs(prev => [...prev, { t: Date.now(), msg, lv }]);
+
+      const sendChat = () => {
+        const msg = chatMsg.trim();
+        if (!msg) return;
+        addLog(msg, "user");
+        setChatMsg("");
+        // TODO: POST /api/chat 연동 시 여기에 추가
+      };
+
+      // Fetch agents and skills from API
+      useEffect(() => {
+        fetch(`${API}/api/agents`).then(r => r.json()).then(d => {
+          setAgents(d.agents || []);
+          addLog(`에이전트 ${d.total}개 로드 완료`, "ok");
+        }).catch(() => addLog("에이전트 로드 실패", "err"));
+
+        fetch(`${API}/api/skills`).then(r => r.json()).then(d => {
+          setSkills(d.skills || []);
+          addLog(`스킬 ${d.total}개 로드 완료`, "ok");
+        }).catch(() => addLog("스킬 로드 실패", "err"));
+
+        document.getElementById("loading").style.display = "none";
+      }, []);
+
+      useEffect(() => {
+        if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+      }, [sysLogs]);
+
+      const selAgent = sel ? agents.find(a => a.agent_id === sel) : null;
+      const master = agents.find(a => a.role === "master_controller");
+
+      const goDetail = (id) => { setSel(id); setView("detail"); };
+
+      const doEquip = (agentId, skillId) => {
+        fetch(`${API}/api/skills/equip`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agent_id: agentId, skill_id: skillId })
+        }).then(r => r.json()).then(d => {
+          if (d.success) {
+            addLog(`스킬 [${skillId}] 장착 완료`, "ok");
+            // Refresh agent data
+            fetch(`${API}/api/agents/${agentId}`).then(r => r.json()).then(agent => {
+              setAgents(prev => prev.map(a => a.agent_id === agentId ? agent : a));
+            });
+          } else {
+            addLog(d.message, "warn");
+          }
+        }).catch(() => addLog("스킬 장착 실패", "err"));
+      };
+
+      const doUnequip = (agentId, skillId) => {
+        fetch(`${API}/api/skills/unequip`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agent_id: agentId, skill_id: skillId })
+        }).then(r => r.json()).then(d => {
+          if (d.success) {
+            addLog(`스킬 [${skillId}] 해제 완료`, "ok");
+            fetch(`${API}/api/agents/${agentId}`).then(r => r.json()).then(agent => {
+              setAgents(prev => prev.map(a => a.agent_id === agentId ? agent : a));
+            });
+          } else {
+            addLog(d.message, "warn");
+          }
+        }).catch(() => addLog("스킬 해제 실패", "err"));
+      };
+
+      const doCreate = (name, role, isMaster) => {
+        fetch(`${API}/api/agents/create`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, role, is_master: isMaster })
+        }).then(r => r.json()).then(d => {
+          if (d.success !== false) {
+            addLog(`에이전트 「${name}」 생산 완료`, "ok");
+            // Refresh all agents
+            fetch(`${API}/api/agents`).then(r => r.json()).then(dd => setAgents(dd.agents || []));
+            setView("home");
+          } else {
+            addLog(d.message || "생성 실패", "err");
+          }
+        }).catch(() => addLog("에이전트 생성 실패", "err"));
+      };
+
+      const tf = (t) => new Date(t).toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+      const logColor = { ok:"#34D399", warn:"#FBBF24", err:"#EF4444", info:"#64748B", sys:"#6366F1", user:"#E2E8F0" };
+
+      const getAgentColor = (a) => {
+        if (a.role === "master_controller") return "#F59E0B";
+        const r = ROLES.find(r => r.v === a.role);
+        return r ? r.color : "#64748B";
+      };
+      const getAgentIcon = (a) => {
+        if (a.role === "master_controller") return "★";
+        const meta = a.metadata || {};
+        return meta.icon || "◇";
+      };
+
+      return (
+        <div style={{
+          background:"#080C14", color:"#CBD5E1", minHeight:"100vh",
+          fontFamily:"'DM Mono', 'IBM Plex Mono', monospace", fontSize:13, position:"relative", overflow:"hidden"
+        }}>
+          <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+          <style>{`
+            @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+            @keyframes scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
+            @keyframes gridPulse { 0%,100%{opacity:0.03} 50%{opacity:0.06} }
+            ::selection { background:#6366F133; color:#E2E8F0 }
+            ::-webkit-scrollbar { width:4px }
+            ::-webkit-scrollbar-track { background:transparent }
+            ::-webkit-scrollbar-thumb { background:#1E2A3A; border-radius:2px }
+          `}</style>
+
+          {/* BG */}
+          <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0 }}>
+            <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle at 1px 1px, #1E2A3A22 1px, transparent 0)", backgroundSize:"32px 32px", animation:"gridPulse 8s ease infinite" }} />
+            <Glow color="#6366F1" size={400} top="-100px" right="-100px" />
+            <Glow color="#06B6D4" size={300} bottom="-50px" left="-50px" />
+          </div>
+
+          {/* HEADER */}
+          <header style={{
+            position:"relative", zIndex:10, borderBottom:"1px solid #111827",
+            padding:"0 24px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:"#080C14DD", backdropFilter:"blur(12px)"
+          }}>
+            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <div style={{ position:"relative" }}>
+                <div style={{
+                  width:32, height:32, borderRadius:8, border:"1.5px solid #6366F155",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:15, fontWeight:700, color:"#6366F1", fontFamily:"Syne"
+                }}>JH</div>
+                <div style={{ position:"absolute", top:-2, right:-2, width:6, height:6, borderRadius:3, background:"#34D399", animation:"pulse 2s ease infinite" }} />
+              </div>
+              <div>
+                <div style={{ fontFamily:"Syne", fontWeight:700, fontSize:15, color:"#E2E8F0" }}>AGENT FACTORY</div>
+                <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.12em", marginTop:1 }}>{agents.length} UNITS · {skills.length} SKILLS</div>
+              </div>
+            </div>
+            <nav style={{ display:"flex", gap:4 }}>
+              {[
+                { k:"home", l:"OVERVIEW", s:"⬡" },
+                { k:"create", l:"PRODUCE", s:"+" },
+              ].map(n => (
+                <button key={n.k} onClick={() => setView(n.k)}
+                  style={{
+                    padding:"7px 16px", borderRadius:6,
+                    border: view === n.k ? "1px solid #6366F155" : "1px solid transparent",
+                    background: view === n.k ? "#6366F10D" : "transparent",
+                    color: view === n.k ? "#A5B4FC" : "#475569",
+                    cursor:"pointer", fontSize:11, fontFamily:"inherit", letterSpacing:"0.06em", fontWeight:500,
+                    display:"flex", alignItems:"center", gap:6, transition:"all 0.2s"
+                  }}>
+                  <span style={{ fontSize:13, opacity:0.7 }}>{n.s}</span>{n.l}
+                </button>
+              ))}
+              <button onClick={() => setLogOpen(o => !o)}
+                style={{ padding:"7px 12px", borderRadius:6, border:"1px solid transparent",
+                  background: logOpen ? "#0F172A" : "transparent", color: logOpen ? "#34D399" : "#475569",
+                  cursor:"pointer", fontSize:11, fontFamily:"inherit", letterSpacing:"0.06em" }}>
+                ◎ LOG
+              </button>
+            </nav>
+          </header>
+
+          <div style={{ display:"flex", position:"relative", zIndex:5, minHeight:"calc(100vh - 56px)" }}>
+            <main style={{ flex:1, padding:"28px 32px", overflowY:"auto", maxHeight:"calc(100vh - 56px)" }}>
+
+              {/* HOME */}
+              {view === "home" && (
+                <div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:10, marginBottom:28 }}>
+                    {[
+                      { l:"TOTAL AGENTS", v:agents.length, c:"#6366F1", sub:"units" },
+                      { l:"AVAILABLE SKILLS", v:skills.length, c:"#06B6D4", sub:"in library" },
+                      { l:"MASTER", v: master ? master.name : "—", c:"#F59E0B", sub:"controller" },
+                      { l:"STATUS", v:"ONLINE", c:"#34D399", sub:"operational" },
+                    ].map((m,i) => (
+                      <div key={i} style={{ background:"#0D1117", borderRadius:12, padding:"16px 20px", border:"1px solid #111827", position:"relative", overflow:"hidden" }}>
+                        <div style={{ position:"absolute", top:0, left:0, right:0, height:1, background:`linear-gradient(90deg, transparent, ${m.c}44, transparent)` }} />
+                        <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.1em", marginBottom:8, fontWeight:500 }}>{m.l}</div>
+                        <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+                          <span style={{ fontSize:28, fontWeight:300, fontFamily:"Syne", color:m.c, letterSpacing:"-0.02em" }}>{m.v}</span>
+                          <span style={{ fontSize:9, color:"#374151", letterSpacing:"0.08em" }}>{m.sub}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+                    <div style={{ fontSize:10, color:"#475569", letterSpacing:"0.1em", fontWeight:600 }}>AGENT ROSTER</div>
+                    <button onClick={() => setView("create")}
+                      style={{ padding:"5px 14px", borderRadius:6, border:"1px solid #1E2A3A", background:"transparent", color:"#6366F1", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
+                      + PRODUCE
+                    </button>
+                  </div>
+
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:10 }}>
+                    {agents.map((a, idx) => {
+                      const color = getAgentColor(a);
+                      const icon = getAgentIcon(a);
+                      const equipped = a.equipped_skills || [];
+                      return (
+                        <div key={a.agent_id} onClick={() => goDetail(a.agent_id)}
+                          style={{ background:"#0D1117", borderRadius:12, padding:"18px 20px", border:"1px solid #111827", cursor:"pointer", position:"relative", overflow:"hidden", transition:"all 0.25s" }}
+                          onMouseOver={e => { e.currentTarget.style.background = "#0F1520"; e.currentTarget.style.borderColor = color + "33"; }}
+                          onMouseOut={e => { e.currentTarget.style.background = "#0D1117"; e.currentTarget.style.borderColor = "#111827"; }}>
+                          <div style={{ position:"absolute", top:0, left:0, right:0, height:1, background:`linear-gradient(90deg, transparent, ${color}55, transparent)` }} />
+                          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+                            <div style={{ width:44, height:44, borderRadius:12, border:`1.5px solid ${color}33`, background:`${color}0A`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, fontWeight:700, color, fontFamily:"Syne" }}>{icon}</div>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontFamily:"Syne", fontWeight:600, fontSize:15, color:"#E2E8F0" }}>{a.name}</div>
+                              <div style={{ fontSize:10, color:"#475569", marginTop:2 }}>{a.role} · {a.agent_id}</div>
+                            </div>
+                            <div style={{ padding:"4px 10px", borderRadius:6, background:"#6366F10D", border:"1px solid #6366F133", fontSize:11, fontFamily:"Syne", fontWeight:700, color:"#A5B4FC" }}>{a.level || 1}</div>
+                          </div>
+                          {equipped.length > 0 && (
+                            <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:12 }}>
+                              {equipped.slice(0,4).map(s => (
+                                <span key={s.skill_id} style={{ fontSize:9, padding:"2px 8px", borderRadius:4, background:"#06B6D40A", border:"1px solid #06B6D422", color:"#06B6D4" }}>{ICON_MAP[s.skill_id] || "⬡"} {s.name}</span>
+                              ))}
+                              {equipped.length > 4 && <span style={{ fontSize:9, color:"#374151" }}>+{equipped.length-4}</span>}
+                            </div>
+                          )}
+                          <div style={{ display:"flex", gap:16, fontSize:10, color:"#334155" }}>
+                            <span>⬡ {equipped.length} skills</span>
+                            <span style={{ color:"#34D399", display:"flex", alignItems:"center", gap:3 }}>
+                              <span style={{ width:4, height:4, borderRadius:2, background:"#34D399", display:"inline-block" }} /> {a.status}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* CREATE */}
+              {view === "create" && <CreateScreen onCreate={doCreate} onCancel={() => setView("home")} hasMaster={!!master} />}
+
+              {/* DETAIL */}
+              {view === "detail" && selAgent && (
+                <DetailScreen agent={selAgent} skills={skills} onBack={() => setView("home")}
+                  onEquip={(sid) => doEquip(selAgent.agent_id, sid)}
+                  onUnequip={(sid) => doUnequip(selAgent.agent_id, sid)} />
+              )}
+            </main>
+
+            {/* LOG PANEL */}
+            {logOpen && (
+              <aside style={{ width:260, borderLeft:"1px solid #111827", background:"#0A0E16EE", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", maxHeight:"calc(100vh - 56px)" }}>
+                <div style={{ padding:"14px 16px 10px", borderBottom:"1px solid #111827", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.12em", fontWeight:600 }}>◎ SYSTEM LOG</div>
+                  <div style={{ width:6, height:6, borderRadius:3, background:"#34D399", animation:"pulse 2s ease infinite" }} />
+                </div>
+                <div ref={logRef} style={{ flex:1, overflowY:"auto", padding:"8px 12px" }}>
+                  {sysLogs.map((l,i) => (
+                    <div key={i} style={{ padding:"8px 10px", marginBottom:4, borderRadius:6, background:"#0D1117", border:"1px solid #11182766", fontSize:11, lineHeight:1.6 }}>
+                      <span style={{ color: logColor[l.lv] || "#64748B", marginRight:6, fontSize:10 }}>
+                        {l.lv === "ok" ? "✓" : l.lv === "warn" ? "△" : l.lv === "err" ? "✕" : l.lv === "sys" ? "◆" : l.lv === "user" ? "▸" : "·"}
+                      </span>
+                      <span style={{ color:"#94A3B8" }}>{l.msg}</span>
+                      <div style={{ fontSize:9, color:"#334155", marginTop:3 }}>{tf(l.t)}</div>
+                    </div>
+                  ))}
+                </div>
+                {master && (
+                  <div style={{ padding:12, borderTop:"1px solid #111827" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px", borderRadius:8, background:"#F59E0B08", border:"1px solid #F59E0B22" }}>
+                      <span style={{ fontSize:16 }}>★</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:11, fontWeight:600, color:"#F59E0B" }}>{master.name}</div>
+                        <div style={{ fontSize:9, color:"#92400E" }}>MASTER CONTROLLER</div>
+                      </div>
+                      <div style={{ width:6, height:6, borderRadius:3, background:"#34D399" }} />
+                    </div>
+                  </div>
+                )}
+                <div style={{ padding:"10px 12px", borderTop:"1px solid #111827" }}>
+                  <form onSubmit={e => { e.preventDefault(); sendChat(); }} style={{ display:"flex", gap:6 }}>
+                    <input value={chatMsg} onChange={e => setChatMsg(e.target.value)}
+                      placeholder="메시지 입력..."
+                      style={{
+                        flex:1, padding:"9px 12px", borderRadius:8,
+                        border:"1.5px solid #1E2A3A", background:"#0D1117",
+                        color:"#E2E8F0", fontSize:11, fontFamily:"inherit",
+                        outline:"none", transition:"border-color 0.2s"
+                      }}
+                      onFocus={e => e.target.style.borderColor = "#6366F155"}
+                      onBlur={e => e.target.style.borderColor = "#1E2A3A"} />
+                    <button type="submit"
+                      style={{
+                        padding:"9px 14px", borderRadius:8, border:"none",
+                        background: chatMsg.trim() ? "linear-gradient(135deg, #6366F1, #4F46E5)" : "#1E2A3A",
+                        color: chatMsg.trim() ? "#fff" : "#475569",
+                        cursor: chatMsg.trim() ? "pointer" : "default",
+                        fontSize:12, fontFamily:"inherit", fontWeight:600,
+                        transition:"all 0.2s"
+                      }}>▸</button>
+                  </form>
+                </div>
+              </aside>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ═════════════════════════════════════════════════════
+    function CreateScreen({ onCreate, onCancel, hasMaster }) {
+      const [form, setForm] = useState({ name:"", role:"general", master:false });
+      const upd = (k,v) => setForm(f => ({...f, [k]:v}));
+
+      return (
+        <div style={{ maxWidth:540, margin:"0 auto" }}>
+          <button onClick={onCancel} style={{ background:"none", border:"none", color:"#475569", cursor:"pointer", fontSize:11, fontFamily:"inherit", marginBottom:20 }}>← BACK</button>
+          <h2 style={{ fontFamily:"Syne", fontWeight:800, fontSize:24, color:"#E2E8F0", margin:"0 0 6px" }}>
+            {form.master ? "★ MASTER AGENT" : "NEW AGENT"}
+          </h2>
+          <p style={{ color:"#475569", fontSize:12, margin:"0 0 28px", lineHeight:1.6 }}>
+            {form.master ? "시스템 총괄 에이전트." : "Level 1 초기 상태로 생산됩니다."}
+          </p>
+
+          <div style={{ marginBottom:24 }}>
+            <label style={{ fontSize:9, color:"#475569", letterSpacing:"0.12em", fontWeight:600, display:"block", marginBottom:8 }}>AGENT NAME</label>
+            <input value={form.name} onChange={e => upd("name", e.target.value)} placeholder="이름을 입력하세요" autoFocus
+              style={{ width:"100%", padding:"14px 18px", borderRadius:10, border:"1.5px solid #1E2A3A", background:"#0D1117", color:"#E2E8F0", fontSize:16, fontFamily:"Syne", fontWeight:500, boxSizing:"border-box" }}
+              onFocus={e => e.target.style.borderColor = "#6366F155"} onBlur={e => e.target.style.borderColor = "#1E2A3A"} />
+          </div>
+
+          {!form.master && (
+            <div style={{ marginBottom:24 }}>
+              <label style={{ fontSize:9, color:"#475569", letterSpacing:"0.12em", fontWeight:600, display:"block", marginBottom:8 }}>SPECIALIZATION</label>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:6 }}>
+                {ROLES.map(r => (
+                  <button key={r.v} onClick={() => upd("role", r.v)}
+                    style={{ padding:"12px 6px", borderRadius:10, textAlign:"center", border: form.role === r.v ? `1.5px solid ${r.color}55` : "1.5px solid #1E2A3A", background: form.role === r.v ? `${r.color}0A` : "#0D1117", color: form.role === r.v ? r.color : "#475569", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
+                    <div style={{ fontSize:18, marginBottom:4, fontFamily:"Syne" }}>{r.ic}</div>
+                    <div style={{ fontSize:10 }}>{r.l}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!hasMaster && (
+            <div style={{ marginBottom:28 }}>
+              <button onClick={() => upd("master", !form.master)}
+                style={{ display:"flex", alignItems:"center", gap:12, width:"100%", padding:"14px 18px", borderRadius:10, border: form.master ? "1.5px solid #F59E0B33" : "1.5px solid #1E2A3A", background: form.master ? "#F59E0B08" : "#0D1117", cursor:"pointer", textAlign:"left", fontFamily:"inherit" }}>
+                <div style={{ width:38, height:20, borderRadius:10, background: form.master ? "#F59E0B" : "#1E2A3A", position:"relative", transition:"background 0.2s" }}>
+                  <div style={{ width:16, height:16, borderRadius:8, background:"#fff", position:"absolute", top:2, left: form.master ? 20 : 2, transition:"left 0.2s" }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:12, color: form.master ? "#F59E0B" : "#64748B", fontWeight:600 }}>마스터 에이전트로 생성</div>
+                  <div style={{ fontSize:10, color:"#475569", marginTop:2 }}>시스템 총괄 · 최초 1회만 가능</div>
+                </div>
+              </button>
+            </div>
+          )}
+
+          <div style={{ display:"flex", gap:10 }}>
+            <button onClick={onCancel}
+              style={{ flex:1, padding:"13px", borderRadius:10, border:"1.5px solid #1E2A3A", background:"transparent", color:"#475569", cursor:"pointer", fontFamily:"inherit", fontSize:12 }}>CANCEL</button>
+            <button onClick={() => { if(form.name.trim()) onCreate(form.name.trim(), form.master ? "master_controller" : form.role, form.master); }} disabled={!form.name.trim()}
+              style={{ flex:2, padding:"13px", borderRadius:10, border:"none",
+                background: form.name.trim() ? (form.master ? "linear-gradient(135deg, #F59E0B, #D97706)" : "linear-gradient(135deg, #6366F1, #4F46E5)") : "#1E2A3A",
+                color: form.name.trim() ? "#fff" : "#475569", cursor: form.name.trim() ? "pointer" : "not-allowed",
+                fontFamily:"Syne", fontWeight:700, fontSize:13 }}>
+              {form.master ? "★ PRODUCE MASTER" : "⬡ PRODUCE AGENT"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ═════════════════════════════════════════════════════
+    function DetailScreen({ agent: a, skills, onBack, onEquip, onUnequip }) {
+      const color = a.role === "master_controller" ? "#F59E0B" : (ROLES.find(r => r.v === a.role) || ROLES[0]).color;
+      const icon = a.role === "master_controller" ? "★" : (a.metadata?.icon || "◇");
+      const equipped = a.equipped_skills || [];
+      const equippedIds = equipped.map(s => s.skill_id);
+      const unequipped = skills.filter(s => !equippedIds.includes(s.skill_id));
+      const stats = a.stats || { INT:1, MEM:1, SPD:1, REL:1 };
+
+      return (
+        <div>
+          <button onClick={onBack} style={{ background:"none", border:"none", color:"#475569", cursor:"pointer", fontSize:11, fontFamily:"inherit", marginBottom:20 }}>← ROSTER</button>
+
+          <div style={{ display:"flex", alignItems:"center", gap:18, marginBottom:32 }}>
+            <div style={{ width:72, height:72, borderRadius:20, border:`2px solid ${color}33`, background:`${color}08`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, fontFamily:"Syne", fontWeight:800, color }}>{icon}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontFamily:"Syne", fontWeight:800, fontSize:26, color:"#E2E8F0" }}>{a.name}</div>
+              <div style={{ fontSize:11, color:"#475569", marginTop:4 }}>{a.role} · {a.agent_id}</div>
+            </div>
+            <div style={{ textAlign:"center", padding:"12px 22px", borderRadius:12, background:"#0D1117", border:"1px solid #111827" }}>
+              <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.1em", marginBottom:4 }}>LEVEL</div>
+              <div style={{ fontSize:32, fontFamily:"Syne", fontWeight:700, color:"#A5B4FC" }}>{a.level || 1}</div>
+            </div>
+          </div>
+
+          <div style={{ background:"#0D1117", borderRadius:14, padding:"20px 24px", border:"1px solid #111827", marginBottom:20 }}>
+            <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.12em", fontWeight:600, marginBottom:14 }}>STATS</div>
+            <StatBar label="INT" value={stats.INT} color="#6366F1" />
+            <StatBar label="MEM" value={stats.MEM} color="#06B6D4" />
+            <StatBar label="SPD" value={stats.SPD} color="#FBBF24" />
+            <StatBar label="REL" value={stats.REL} color="#34D399" />
+          </div>
+
+          <div style={{ background:"#0D1117", borderRadius:14, padding:"20px 24px", border:"1px solid #111827" }}>
+            {equipped.length > 0 && (
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.12em", fontWeight:600, marginBottom:10 }}>EQUIPPED</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  {equipped.map(s => (
+                    <div key={s.skill_id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", borderRadius:10, background:"#080C14", border:"1px solid #1E2A3A" }}>
+                      <span style={{ fontSize:16, color:"#06B6D4", fontFamily:"Syne", fontWeight:700, width:24, textAlign:"center" }}>{ICON_MAP[s.skill_id] || "⬡"}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:12, fontWeight:600, color:"#CBD5E1" }}>{s.name}</div>
+                        <div style={{ fontSize:10, color:"#475569", marginTop:2 }}>{s.description}</div>
+                      </div>
+                      <Badge color={CAT_COLOR[s.category] || "#64748B"}>{s.category}</Badge>
+                      <button onClick={() => onUnequip(s.skill_id)}
+                        style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #EF444433", background:"#EF44440A", color:"#EF4444", cursor:"pointer", fontSize:10, fontFamily:"inherit" }}>REMOVE</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {unequipped.length > 0 && (
+              <div>
+                <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.12em", fontWeight:600, marginBottom:10 }}>AVAILABLE</div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:6 }}>
+                  {unequipped.map(s => (
+                    <button key={s.skill_id} onClick={() => onEquip(s.skill_id)}
+                      style={{ padding:"12px 14px", borderRadius:10, textAlign:"left", border:"1.5px solid #1E2A3A", background:"#080C14", cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s", display:"flex", alignItems:"center", gap:10 }}
+                      onMouseOver={e => e.currentTarget.style.borderColor = "#06B6D433"} onMouseOut={e => e.currentTarget.style.borderColor = "#1E2A3A"}>
+                      <span style={{ fontSize:16, color:"#475569", fontFamily:"Syne" }}>{ICON_MAP[s.skill_id] || "⬡"}</span>
+                      <div>
+                        <div style={{ fontSize:11, color:"#94A3B8", fontWeight:500 }}>{s.name}</div>
+                        <div style={{ fontSize:9, color:"#334155", marginTop:2 }}>{s.category}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── RENDER ──────────────────────────────────────────
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<AgentFactory />);
+  </script>
+</body>
+</html>

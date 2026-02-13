@@ -1,0 +1,13 @@
+{
+  "skill_id": "data_processor",
+  "name": "데이터 처리기",
+  "description": "CSV, JSON, 텍스트 데이터 파싱 및 변환",
+  "category": "data",
+  "version": "1.0.0",
+  "dependencies": [
+    "pandas",
+    "numpy"
+  ],
+  "cost": "free",
+  "equipped_at": "2026-02-13T17:20:49.748750"
+}

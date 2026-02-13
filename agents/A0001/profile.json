@@ -4,7 +4,77 @@
   "role": "master_controller",
   "level": 5,
   "status": "online",
-  "equipped_skills": [],
+  "equipped_skills": [
+    {
+      "skill_id": "data_processor",
+      "name": "데이터 처리기",
+      "description": "CSV, JSON, 텍스트 데이터 파싱 및 변환",
+      "category": "data",
+      "version": "1.0.0",
+      "dependencies": [
+        "pandas",
+        "numpy"
+      ],
+      "cost": "free",
+      "equipped_at": "2026-02-13T17:20:49.748750"
+    },
+    {
+      "skill_id": "nlp_basic",
+      "name": "기본 자연어 처리",
+      "description": "텍스트 분석, 키워드 추출, 감정 분석",
+      "category": "ai",
+      "version": "1.0.0",
+      "dependencies": [
+        "spacy"
+      ],
+      "cost": "free",
+      "equipped_at": "2026-02-13T17:20:54.336612"
+    },
+    {
+      "skill_id": "example_echo",
+      "name": "Echo Skill",
+      "description": "Echoes the input back as output. Use as a template for new skills.",
+      "category": "utility",
+      "version": "1.0.0",
+      "dependencies": [],
+      "cost": "free",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Text to echo back"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "echo": {
+            "type": "string",
+            "description": "Echoed message"
+          }
+        }
+      },
+      "prompt": "You are an echo skill. Return the user's input exactly as received, without modification.",
+      "equipped_at": "2026-02-13T17:21:00.267597"
+    },
+    {
+      "skill_id": "log_analyzer",
+      "name": "로그 분석기",
+      "description": "에이전트 로그를 분석하여 패턴과 이상을 감지",
+      "category": "monitoring",
+      "version": "1.0.0",
+      "dependencies": [
+        "pandas"
+      ],
+      "cost": "free",
+      "equipped_at": "2026-02-13T17:28:19.339939"
+    }
+  ],
   "stats": {
     "INT": 5,
     "MEM": 5,

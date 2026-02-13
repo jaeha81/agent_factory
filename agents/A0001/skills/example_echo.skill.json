@@ -1,0 +1,32 @@
+{
+  "skill_id": "example_echo",
+  "name": "Echo Skill",
+  "description": "Echoes the input back as output. Use as a template for new skills.",
+  "category": "utility",
+  "version": "1.0.0",
+  "dependencies": [],
+  "cost": "free",
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "message": {
+        "type": "string",
+        "description": "Text to echo back"
+      }
+    },
+    "required": [
+      "message"
+    ]
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "echo": {
+        "type": "string",
+        "description": "Echoed message"
+      }
+    }
+  },
+  "prompt": "You are an echo skill. Return the user's input exactly as received, without modification.",
+  "equipped_at": "2026-02-13T17:21:00.267597"
+}

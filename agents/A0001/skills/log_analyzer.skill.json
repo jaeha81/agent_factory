@@ -1,0 +1,12 @@
+{
+  "skill_id": "log_analyzer",
+  "name": "로그 분석기",
+  "description": "에이전트 로그를 분석하여 패턴과 이상을 감지",
+  "category": "monitoring",
+  "version": "1.0.0",
+  "dependencies": [
+    "pandas"
+  ],
+  "cost": "free",
+  "equipped_at": "2026-02-13T17:28:19.339939"
+}

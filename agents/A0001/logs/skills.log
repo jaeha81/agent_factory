@@ -8,5 +8,65 @@
     "timestamp": "2026-02-13T16:48:23.422795",
     "event": "SKILL_UNEQUIPPED",
     "skill_id": "example_echo"
+  },
+  {
+    "timestamp": "2026-02-13T17:14:05.640937",
+    "event": "SKILL_EQUIPPED",
+    "skill_id": "log_analyzer"
+  },
+  {
+    "timestamp": "2026-02-13T17:14:07.723726",
+    "event": "SKILL_EQUIPPED",
+    "skill_id": "scheduler"
+  },
+  {
+    "timestamp": "2026-02-13T17:14:11.028378",
+    "event": "SKILL_EQUIPPED",
+    "skill_id": "nlp_basic"
+  },
+  {
+    "timestamp": "2026-02-13T17:14:12.133733",
+    "event": "SKILL_EQUIPPED",
+    "skill_id": "data_processor"
+  },
+  {
+    "timestamp": "2026-02-13T17:14:17.667107",
+    "event": "SKILL_UNEQUIPPED",
+    "skill_id": "log_analyzer"
+  },
+  {
+    "timestamp": "2026-02-13T17:14:20.578916",
+    "event": "SKILL_UNEQUIPPED",
+    "skill_id": "scheduler"
+  },
+  {
+    "timestamp": "2026-02-13T17:14:21.282078",
+    "event": "SKILL_UNEQUIPPED",
+    "skill_id": "nlp_basic"
+  },
+  {
+    "timestamp": "2026-02-13T17:14:22.764475",
+    "event": "SKILL_UNEQUIPPED",
+    "skill_id": "data_processor"
+  },
+  {
+    "timestamp": "2026-02-13T17:20:49.750649",
+    "event": "SKILL_EQUIPPED",
+    "skill_id": "data_processor"
+  },
+  {
+    "timestamp": "2026-02-13T17:20:54.338661",
+    "event": "SKILL_EQUIPPED",
+    "skill_id": "nlp_basic"
+  },
+  {
+    "timestamp": "2026-02-13T17:21:00.269775",
+    "event": "SKILL_EQUIPPED",
+    "skill_id": "example_echo"
+  },
+  {
+    "timestamp": "2026-02-13T17:28:19.342132",
+    "event": "SKILL_EQUIPPED",
+    "skill_id": "log_analyzer"
   }
 ]

@@ -10,6 +10,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
@@ -136,6 +137,17 @@ def api_system_status():
         "worker_agents": len(agents) - master_count,
         "skills_available": len(skills_mgr.list_available_skills())
     }
+
+
+# ─── 대시보드 UI ─────────────────────────────────────
+STATIC_DIR = Path(__file__).parent / "static"
+
+@app.get("/")
+def dashboard():
+    """대시보드 메인 페이지"""
+    return FileResponse(STATIC_DIR / "index.html")
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 if __name__ == "__main__":
