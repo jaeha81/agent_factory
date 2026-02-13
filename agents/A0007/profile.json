@@ -1,7 +1,7 @@
 {
-  "agent_id": "A0002",
-  "name": "워커봇",
-  "role": "data_analyst",
+  "agent_id": "A0007",
+  "name": "ㅎㅎ",
+  "role": "content_creator",
   "level": 1,
   "status": "online",
   "equipped_skills": [],
@@ -23,6 +23,7 @@
     "tags": [],
     "icon": "◇"
   },
-  "created_at": "2026-02-12T19:36:50Z",
-  "protocol": "CHUNSIK_PROTOCOL_v1.0"
+  "created_at": "2026-02-13T08:53:20Z",
+  "protocol": "CHUNSIK_PROTOCOL_v1.0",
+  "last_state_change": "2026-02-13T09:20:11Z"
 }

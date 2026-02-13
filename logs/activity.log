@@ -3,3 +3,6 @@
 [2026-02-12T19:42:47Z] AGENT_CREATED id=A0003 name=워커3 role=data_analyst
 [2026-02-12T22:14:47Z] AGENT_CREATED id=A0004 name=워커NEXT role=data_analyst
 [2026-02-12T22:26:17Z] AGENT_CREATED id=A0005 name=워커E2E role=data_analyst
+[2026-02-13T08:52:48Z] AGENT_CREATED id=A0006 name=ㅇㅇ role=content_creator
+[2026-02-13T08:53:20Z] AGENT_CREATED id=A0007 name=ㅎㅎ role=content_creator
+[2026-02-13T08:56:48Z] AGENT_CREATED id=A0008 name=ㅇㅇ role=data_analyst

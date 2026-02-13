@@ -1,4 +1,4 @@
-# Agent Config — A0002
+# Agent Config — A0007
 active_frameworks: []
 memory_policy:
   max_tokens: 4000

@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-02-13T17:53:25.830131",
+    "event": "SKILL_EQUIPPED",
+    "skill_id": "example_echo"
+  },
+  {
+    "timestamp": "2026-02-13T17:53:29.200315",
+    "event": "SKILL_UNEQUIPPED",
+    "skill_id": "example_echo"
+  }
+]

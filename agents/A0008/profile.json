@@ -1,6 +1,6 @@
 {
-  "agent_id": "A0005",
-  "name": "워커E2E",
+  "agent_id": "A0008",
+  "name": "ㅇㅇ",
   "role": "data_analyst",
   "level": 1,
   "status": "online",
@@ -23,6 +23,6 @@
     "tags": [],
     "icon": "◇"
   },
-  "created_at": "2026-02-12T22:26:17Z",
+  "created_at": "2026-02-13T08:56:48Z",
   "protocol": "CHUNSIK_PROTOCOL_v1.0"
 }
