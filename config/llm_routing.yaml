@@ -1,0 +1,184 @@
+# ═══════════════════════════════════════════════════════
+# JH Agent Factory — LLM Routing Configuration
+# ═══════════════════════════════════════════════════════
+#
+# 구조: providers → task_class → routing_chain → failover → escalation → budget
+# provider 설정만 바꾸면 교체 가능. 코드에 API 키 하드코딩 금지 (.env 필수).
+
+# ─── 프로바이더 정의 ──────────────────────────────────
+providers:
+  # ── 무료 티어 (free) ──
+  groq:
+    tier: free
+    url: "https://api.groq.com/openai/v1/chat/completions"
+    key_env: GROQ_API_KEY
+    model: "llama-3.1-8b-instant"
+    format: openai
+    max_tokens: 2048
+    rpm_limit: 30          # 분당 요청 제한 (추정)
+    timeout_sec: 30
+    notes: "무료, 빠른 응답, 작은 모델"
+
+  gemini_flash:
+    tier: free
+    url: "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    key_env: GEMINI_API_KEY
+    model: "gemini-2.0-flash"
+    format: gemini
+    max_tokens: 2048
+    rpm_limit: 15
+    timeout_sec: 30
+    notes: "무료, 중간 품질"
+
+  together_free:
+    tier: free
+    url: "https://api.together.xyz/v1/chat/completions"
+    key_env: TOGETHER_API_KEY
+    model: "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
+    format: openai
+    max_tokens: 2048
+    rpm_limit: 10
+    timeout_sec: 30
+    notes: "무료, 큰 모델(70B), 느릴 수 있음"
+
+  openrouter_free:
+    tier: free
+    url: "https://openrouter.ai/api/v1/chat/completions"
+    key_env: OPENROUTER_API_KEY
+    model: "meta-llama/llama-3.1-8b-instruct:free"
+    format: openai
+    max_tokens: 2048
+    rpm_limit: 10
+    timeout_sec: 30
+    notes: "무료 폴백"
+
+  # ── 저비용 티어 (low_cost) ──
+  gemini_pro:
+    tier: low_cost
+    url: "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    key_env: GEMINI_API_KEY
+    model: "gemini-1.5-pro"
+    format: gemini
+    max_tokens: 4096
+    rpm_limit: 60
+    timeout_sec: 60
+    cost_per_1k_tokens: 0.00125
+    notes: "저비용, 고품질"
+
+  together_paid:
+    tier: low_cost
+    url: "https://api.together.xyz/v1/chat/completions"
+    key_env: TOGETHER_API_KEY
+    model: "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
+    format: openai
+    max_tokens: 4096
+    rpm_limit: 60
+    timeout_sec: 60
+    cost_per_1k_tokens: 0.0009
+    notes: "저비용, 빠른 큰 모델"
+
+  # ── 프리미엄 티어 (premium) ──
+  openai_gpt4o:
+    tier: premium
+    url: "https://api.openai.com/v1/chat/completions"
+    key_env: OPENAI_API_KEY
+    model: "gpt-4o"
+    format: openai
+    max_tokens: 4096
+    rpm_limit: 500
+    timeout_sec: 120
+    cost_per_1k_tokens: 0.005
+    notes: "프리미엄, 최고 품질"
+
+  anthropic_sonnet:
+    tier: premium
+    url: "https://api.anthropic.com/v1/messages"
+    key_env: ANTHROPIC_API_KEY
+    model: "claude-sonnet-4-5-20250929"
+    format: anthropic
+    max_tokens: 4096
+    rpm_limit: 500
+    timeout_sec: 120
+    cost_per_1k_tokens: 0.003
+    notes: "프리미엄, 균형 잡힌 품질"
+
+
+# ─── 작업 분류 (task_class) ───────────────────────────
+task_classes:
+  light:
+    description: "간단한 질문, 인사, 상태 확인"
+    temperature: 0.7
+    max_tokens: 1024
+
+  general:
+    description: "일반 대화, 명령 파싱, 보고서 작성"
+    temperature: 0.7
+    max_tokens: 2048
+
+  coding:
+    description: "코드 생성, 리팩토링, 디버깅, 테스트"
+    temperature: 0.3
+    max_tokens: 4096
+
+  high_precision:
+    description: "정밀 분석, 중요 판단, 보안 감사"
+    temperature: 0.1
+    max_tokens: 4096
+
+
+# ─── 라우팅 체인 (task_class별 후보 우선순위) ─────────
+routing_chain:
+  light:
+    - groq
+    - gemini_flash
+    - openrouter_free
+
+  general:
+    - groq
+    - gemini_flash
+    - together_free
+    - openrouter_free
+    - gemini_pro
+    - together_paid
+
+  coding:
+    - together_free
+    - gemini_flash
+    - groq
+    - gemini_pro
+    - together_paid
+    - openai_gpt4o
+
+  high_precision:
+    - gemini_pro
+    - together_paid
+    - openai_gpt4o
+    - anthropic_sonnet
+
+
+# ─── 장애 전환 규칙 ──────────────────────────────────
+failover:
+  # HTTP 상태 코드별 동작
+  retry_on_status: [429, 500, 502, 503, 504]
+  max_retries_per_provider: 1
+  cooldown_sec: 60           # 실패한 프로바이더 쿨다운
+  timeout_is_failover: true  # 타임아웃도 즉시 다음 후보로
+
+
+# ─── 승격 규칙 (escalation) ──────────────────────────
+escalation:
+  # 무료 → 유료 자동 승격 조건
+  schema_mismatch_threshold: 2    # JSON 스키마 불일치 N회 연속 시 승격
+  consecutive_fail_threshold: 3   # 연속 실패 N회 시 승격
+  quality_check_enabled: true     # 응답 품질 검사 활성화
+  auto_escalate_to_tier: low_cost # 승격 대상 티어
+  premium_escalate_after: 2       # low_cost에서도 실패 시 premium으로
+
+
+# ─── 예산 가드 ────────────────────────────────────────
+budget:
+  daily_limit_usd: 1.00        # 일일 예산 ($)
+  monthly_limit_usd: 20.00     # 월간 예산 ($)
+  warn_at_percent: 80          # 예산의 N% 도달 시 경고
+  block_on_exceed: true        # 예산 초과 시 유료 호출 차단 (무료만 허용)
+  reset_hour_utc: 0            # 일일 리셋 시각 (UTC)

@@ -27,7 +27,8 @@ from agent_creator import (
     _load_registry, _save_registry,
 )
 from skills_manager import SkillsManager
-from ai_router import chat as ai_chat, get_router_status, clear_session, get_session
+from ai_router import chat as ai_chat, get_router_status as legacy_router_status, clear_session, get_session
+from llm_router import route_chat, route as llm_route, get_router_status, get_budget_status, reload_config as reload_llm_config
 
 # ─── 경로 상수 ──────────────────────────────────────
 PROJECT_ROOT = Path(__file__).parent
@@ -316,9 +317,15 @@ def _load_system_prompt() -> str:
 
 @app.post("/api/chat")
 async def api_chat(req: ChatRequest):
-    """춘식이 채팅"""
+    """춘식이 채팅 (LLM 라우터 경유)"""
     system_prompt = _load_system_prompt()
-    result = await ai_chat(req.session_id, req.message, system_prompt)
+    result = await route_chat(
+        session_id=req.session_id,
+        user_message=req.message,
+        system_prompt=system_prompt,
+        task_class="general",
+        agent_id="A0001",
+    )
 
     # 명령 엔진 처리
     if result.get("error") is None and result.get("reply"):
@@ -368,8 +375,21 @@ def api_system_status():
 
 @app.get("/api/router/status")
 def api_router_status():
-    """AI 라우터 상태"""
+    """LLM 라우터 상태 (프로바이더 + 예산 + 설정)"""
     return get_router_status()
+
+
+@app.get("/api/router/budget")
+def api_router_budget():
+    """LLM 예산 현황"""
+    return get_budget_status()
+
+
+@app.post("/api/router/reload")
+def api_router_reload():
+    """LLM 라우팅 설정 핫 리로드"""
+    reload_llm_config()
+    return {"success": True, "message": "llm_routing.yaml 리로드 완료"}
 
 
 # ═══════════════════════════════════════════════════════

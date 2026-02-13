@@ -157,6 +157,15 @@ export default function AgentFactory() {
   const [form, setForm] = useState({ name:"", role:"general", icon:"◇", desc:"", master:false });
   const [logOpen, setLogOpen] = useState(true);
   const logRef = useRef(null);
+  const [llmStatus, setLlmStatus] = useState(null);
+
+  // LLM 라우터 상태 폴링 (30초 간격)
+  useEffect(() => {
+    const fetchLlm = () => fetch("/api/router/status").then(r=>r.ok?r.json():null).then(setLlmStatus).catch(()=>{});
+    fetchLlm();
+    const iv = setInterval(fetchLlm, 30000);
+    return () => clearInterval(iv);
+  }, []);
 
   const master = st.agents.find(a => a.role === "master_controller");
   const hasMaster = !!master;
@@ -234,7 +243,11 @@ export default function AgentFactory() {
           </div>
           <div>
             <div style={{ fontFamily:"Syne", fontWeight:700, fontSize:15, color:"#E2E8F0", letterSpacing:"-0.02em" }}>AGENT FACTORY</div>
-            <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.12em", marginTop:1 }}>{st.agents.length} UNITS DEPLOYED</div>
+            <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.12em", marginTop:1 }}>
+              {st.agents.length} UNITS
+              {llmStatus && <span style={{ marginLeft:8, color:"#06B6D4" }}>LLM: {llmStatus.providers?.filter(p=>p.available).length||0}/{llmStatus.providers?.length||0} providers</span>}
+              {llmStatus?.budget && <span style={{ marginLeft:6, color: llmStatus.budget.daily_spent > llmStatus.budget.daily_limit * 0.8 ? "#FBBF24" : "#34D399" }}>${llmStatus.budget.daily_spent.toFixed(4)}/{llmStatus.budget.daily_limit}</span>}
+            </div>
           </div>
         </div>
         <nav style={{ display:"flex", gap:4 }}>
