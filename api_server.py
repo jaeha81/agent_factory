@@ -10,13 +10,14 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
 import json
 import shutil
 import sys
+import socket
 from pathlib import Path
 
 # 코어 모듈 임포트
@@ -503,8 +504,71 @@ def dashboard():
     """대시보드 메인 페이지"""
     return FileResponse(STATIC_DIR / "index.html")
 
+
+def _get_local_ip():
+    """로컬 네트워크 IP 주소 탐지"""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
+@app.get("/mobile", response_class=HTMLResponse)
+def mobile_access_page():
+    """모바일 접속 안내 페이지 + QR 코드"""
+    local_ip = _get_local_ip()
+    url = f"http://{local_ip}:8000"
+    # QR 코드: Google Charts API (외부 의존성 없음)
+    qr_url = f"https://chart.googleapis.com/chart?chs=280x280&cht=qr&chl={url}&choe=UTF-8&chld=M|2"
+    return f"""<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Mobile Access — JH Agent Factory</title>
+<style>
+  *{{margin:0;padding:0;box-sizing:border-box}}
+  body{{background:#0a0a0c;color:#CBD5E1;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh}}
+  .card{{text-align:center;padding:40px 32px;max-width:400px}}
+  .logo{{width:48px;height:48px;border-radius:14px;border:2px solid #ff6b2b55;display:inline-flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#ff6b2b;font-family:Syne,sans-serif;margin-bottom:16px}}
+  h1{{font-family:Syne,sans-serif;font-weight:800;font-size:22px;color:#E2E8F0;margin-bottom:8px}}
+  .sub{{font-size:12px;color:#6B7A90;margin-bottom:28px}}
+  .qr{{border-radius:16px;border:1px solid #222228;padding:16px;background:#111114;display:inline-block;margin-bottom:20px}}
+  .qr img{{border-radius:8px;display:block}}
+  .url{{font-size:18px;font-family:Syne,sans-serif;font-weight:700;color:#ff6b2b;margin-bottom:8px;word-break:break-all}}
+  .hint{{font-size:11px;color:#3A3F4B;line-height:1.7}}
+  .copy-btn{{margin-top:16px;padding:12px 24px;border-radius:10px;border:1.5px solid #ff6b2b55;background:#ff6b2b0A;color:#ff6b2b;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:all .2s}}
+  .copy-btn:hover{{background:#ff6b2b;color:#fff}}
+  .status{{margin-top:20px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:#34D399}}
+  .dot{{width:6px;height:6px;border-radius:3px;background:#34D399;animation:pulse 2s ease infinite}}
+  @keyframes pulse{{0%,100%{{opacity:.4}}50%{{opacity:1}}}}
+</style>
+</head><body>
+<div class="card">
+  <div class="logo">JH</div>
+  <h1>AGENT FACTORY</h1>
+  <p class="sub">모바일에서 아래 QR 코드를 스캔하세요</p>
+  <div class="qr"><img src="{qr_url}" alt="QR Code" width="280" height="280"/></div>
+  <div class="url">{url}</div>
+  <p class="hint">같은 Wi-Fi 네트워크에서 접속 가능합니다<br/>모바일 브라우저에서 위 주소를 직접 입력해도 됩니다</p>
+  <button class="copy-btn" onclick="navigator.clipboard.writeText('{url}').then(()=>this.textContent='복사 완료!').catch(()=>{{}})">주소 복사</button>
+  <div class="status"><span class="dot"></span>서버 실행 중 · Port 8000</div>
+</div>
+</body></html>"""
+
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 if __name__ == "__main__":
+    local_ip = _get_local_ip()
+    print("\n" + "="*50)
+    print("  JH Agent Factory v2.2 — Dashboard")
+    print("="*50)
+    print(f"  Local:   http://localhost:8000")
+    print(f"  Network: http://{local_ip}:8000")
+    print(f"  Mobile:  http://localhost:8000/mobile")
+    print("="*50 + "\n")
     uvicorn.run(app, host="0.0.0.0", port=8000)
