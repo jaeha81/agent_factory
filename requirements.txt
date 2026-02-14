@@ -3,3 +3,4 @@ uvicorn[standard]
 pyyaml
 httpx>=0.25.0
 python-dotenv>=1.0.0
+openai-agents>=0.8.0

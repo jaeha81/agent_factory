@@ -39,7 +39,7 @@ STATIC_DIR = PROJECT_ROOT / "static"
 app = FastAPI(
     title="JH Agent Factory",
     description="에이전트 공장형 시스템 API",
-    version="2.2.0"
+    version="2.3.0"
 )
 
 # CORS 설정
@@ -117,6 +117,11 @@ class BulkReplicateReq(BaseModel):
     count: int = 3
     name_prefix: str = "클론"
     inherit_skills: bool = True
+
+
+class SDKRunRequest(BaseModel):
+    task: str
+    provider: Optional[str] = None
 
 
 # ─── 레벨업 조건 ─────────────────────────────────────
@@ -359,7 +364,7 @@ def api_system_status():
     return {
         "status": "operational",
         "factory_name": "JH Agent Factory",
-        "version": "2.2.0",
+        "version": "2.3.0",
         "total_agents": len(agents),
         "master_agents": master_count,
         "worker_agents": len(agents) - master_count,
@@ -473,6 +478,40 @@ def api_bulk_replicate(req: BulkReplicateReq):
     results = bulk_replicate(req.source_id, req.count, req.name_prefix, req.inherit_skills)
     success_count = sum(1 for r in results if r["success"])
     return {"results": results, "total": len(results), "success": success_count}
+
+
+# ═══════════════════════════════════════════════════════
+# SDK 전문 에이전트 API (v2.3)
+# ═══════════════════════════════════════════════════════
+
+@app.get("/api/sdk/specialists")
+def api_sdk_list_specialists():
+    """SDK 전문 에이전트 목록"""
+    from core.agent_sdk import list_specialists
+    specs = list_specialists()
+    return {"specialists": specs, "total": len(specs)}
+
+
+@app.post("/api/sdk/run")
+async def api_sdk_run_triage(req: SDKRunRequest):
+    """트리아지 에이전트를 통한 자동 라우팅 실행"""
+    from core.agent_sdk import run_triage
+    result = await run_triage(req.task, req.provider)
+    return result
+
+
+@app.post("/api/sdk/specialists/{agent_type}/run")
+async def api_sdk_run_specialist(agent_type: str, req: SDKRunRequest):
+    """특정 전문 에이전트 직접 실행"""
+    from core.agent_sdk import run_specialist, SPECIALIST_DEFS
+    if agent_type not in SPECIALIST_DEFS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"알 수 없는 에이전트 타입: {agent_type}. "
+                   f"사용 가능: {', '.join(SPECIALIST_DEFS.keys())}"
+        )
+    result = await run_specialist(agent_type, req.task, req.provider)
+    return result
 
 
 # ═══════════════════════════════════════════════════════
