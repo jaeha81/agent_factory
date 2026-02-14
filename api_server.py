@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -486,5 +487,12 @@ def dashboard():
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+@app.get("/health")
+def health_check():
+    """Railway 헬스체크 엔드포인트"""
+    return {"status": "ok"}
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
