@@ -314,6 +314,74 @@ if SDK_AVAILABLE:
         }
         return json.dumps(status, ensure_ascii=False, indent=2)
 
+    # ─── 지식 베이스 도구 ─────────────────────────────
+
+    @function_tool
+    def query_knowledge_base(kb_id: str, question: str) -> str:
+        """지식 베이스에 질문합니다. Gemini 2.5 Pro가 등록된 문서를 기반으로 답변합니다."""
+        import asyncio
+        from core.knowledge_base import get_knowledge_base
+
+        kb = get_knowledge_base(kb_id)
+        if not kb:
+            return f"지식 베이스 '{kb_id}'를 찾을 수 없습니다."
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    result = pool.submit(
+                        asyncio.run, kb.query(question)
+                    ).result()
+            else:
+                result = asyncio.run(kb.query(question))
+        except Exception as e:
+            return f"질의 실패: {e}"
+
+        if result.get("error"):
+            return f"오류: {result['error']}"
+        return result["answer"]
+
+    @function_tool
+    def list_knowledge() -> str:
+        """사용 가능한 지식 베이스 목록을 조회합니다."""
+        from core.knowledge_base import list_knowledge_bases
+
+        kbs = list_knowledge_bases()
+        if not kbs:
+            return "등록된 지식 베이스가 없습니다."
+
+        lines = []
+        for kb in kbs:
+            lines.append(
+                f"- {kb['kb_id']}: {kb['name']} "
+                f"(소스 {kb['sources_count']}개) — {kb.get('description', '')}"
+            )
+        return "\n".join(lines)
+
+    @function_tool
+    def get_knowledge_sources(kb_id: str) -> str:
+        """특정 지식 베이스에 등록된 소스(문서) 목록을 조회합니다."""
+        from core.knowledge_base import get_knowledge_base
+
+        kb = get_knowledge_base(kb_id)
+        if not kb:
+            return f"지식 베이스 '{kb_id}'를 찾을 수 없습니다."
+
+        sources = kb.list_sources()
+        if not sources:
+            return f"지식 베이스 '{kb_id}'에 등록된 소스가 없습니다."
+
+        lines = []
+        for s in sources:
+            size_kb = s.get("size_bytes", 0) / 1024
+            lines.append(
+                f"- {s['source_id']}: {s['title']} "
+                f"({s['type']}, {size_kb:.1f}KB, {s.get('added_at', '')[:10]})"
+            )
+        return "\n".join(lines)
+
 
 # ═══════════════════════════════════════════════════════
 # 전문화 에이전트 정의
@@ -344,6 +412,7 @@ SPECIALIST_DEFS = {
         "tools_keys": [
             "analyze_code", "search_project_files", "read_file_content",
             "read_agent_memory", "save_to_memory",
+            "query_knowledge_base", "list_knowledge",
         ],
     },
     "data_analyst": {
@@ -369,6 +438,7 @@ SPECIALIST_DEFS = {
         "tools_keys": [
             "analyze_code", "search_project_files", "read_file_content",
             "read_agent_memory", "save_to_memory", "get_agent_detail",
+            "query_knowledge_base", "list_knowledge",
         ],
     },
     "researcher": {
@@ -395,6 +465,7 @@ SPECIALIST_DEFS = {
             "search_project_files", "read_file_content",
             "list_factory_agents", "list_skills_catalog",
             "read_agent_memory", "save_to_memory",
+            "query_knowledge_base", "list_knowledge", "get_knowledge_sources",
         ],
     },
     "content_creator": {
@@ -420,6 +491,7 @@ SPECIALIST_DEFS = {
         "tools_keys": [
             "search_project_files", "read_file_content",
             "read_agent_memory", "save_to_memory",
+            "query_knowledge_base", "list_knowledge",
         ],
     },
     "system_admin": {
@@ -445,6 +517,7 @@ SPECIALIST_DEFS = {
         "tools_keys": [
             "get_factory_status", "list_factory_agents", "get_agent_detail",
             "list_skills_catalog", "read_agent_memory", "save_to_memory",
+            "query_knowledge_base", "list_knowledge", "get_knowledge_sources",
         ],
     },
 }
@@ -462,6 +535,9 @@ if SDK_AVAILABLE:
         "search_project_files": search_project_files,
         "read_file_content": read_file_content,
         "get_factory_status": get_factory_status,
+        "query_knowledge_base": query_knowledge_base,
+        "list_knowledge": list_knowledge,
+        "get_knowledge_sources": get_knowledge_sources,
     }
 
 

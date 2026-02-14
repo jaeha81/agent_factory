@@ -124,6 +124,21 @@ class SDKRunRequest(BaseModel):
     provider: Optional[str] = None
 
 
+class KBCreateRequest(BaseModel):
+    kb_id: str
+    name: str
+    description: str = ""
+
+
+class KBAddTextRequest(BaseModel):
+    title: str
+    content: str
+
+
+class KBQueryRequest(BaseModel):
+    question: str
+
+
 # ─── 레벨업 조건 ─────────────────────────────────────
 LEVEL_REQUIREMENTS = {
     1: {"skills": 1, "tasks": 1},
@@ -512,6 +527,91 @@ async def api_sdk_run_specialist(agent_type: str, req: SDKRunRequest):
         )
     result = await run_specialist(agent_type, req.task, req.provider)
     return result
+
+
+# ═══════════════════════════════════════════════════════
+# 지식 베이스 API (NotebookLM 스타일)
+# ═══════════════════════════════════════════════════════
+
+@app.get("/api/knowledge")
+def api_list_knowledge_bases():
+    """지식 베이스 목록"""
+    from core.knowledge_base import list_knowledge_bases
+    kbs = list_knowledge_bases()
+    return {"knowledge_bases": kbs, "total": len(kbs)}
+
+
+@app.post("/api/knowledge")
+def api_create_knowledge_base(req: KBCreateRequest):
+    """지식 베이스 생성"""
+    from core.knowledge_base import create_knowledge_base
+    return create_knowledge_base(req.kb_id, req.name, req.description)
+
+
+@app.get("/api/knowledge/{kb_id}")
+def api_get_knowledge_base(kb_id: str):
+    """지식 베이스 상세 정보"""
+    from core.knowledge_base import get_knowledge_base
+    kb = get_knowledge_base(kb_id)
+    if not kb:
+        raise HTTPException(status_code=404, detail=f"지식 베이스 '{kb_id}'를 찾을 수 없습니다.")
+    meta = kb.get_metadata()
+    meta["sources_count"] = len(meta.get("sources", []))
+    return meta
+
+
+@app.delete("/api/knowledge/{kb_id}")
+def api_delete_knowledge_base(kb_id: str):
+    """지식 베이스 삭제"""
+    from core.knowledge_base import delete_knowledge_base
+    result = delete_knowledge_base(kb_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=404, detail=result.get("message"))
+    return result
+
+
+@app.get("/api/knowledge/{kb_id}/sources")
+def api_list_kb_sources(kb_id: str):
+    """지식 베이스 소스 목록"""
+    from core.knowledge_base import get_knowledge_base
+    kb = get_knowledge_base(kb_id)
+    if not kb:
+        raise HTTPException(status_code=404, detail=f"지식 베이스 '{kb_id}'를 찾을 수 없습니다.")
+    sources = kb.list_sources()
+    return {"sources": sources, "total": len(sources)}
+
+
+@app.post("/api/knowledge/{kb_id}/sources/text")
+def api_add_kb_text(kb_id: str, req: KBAddTextRequest):
+    """지식 베이스에 텍스트 소스 추가"""
+    from core.knowledge_base import get_knowledge_base
+    kb = get_knowledge_base(kb_id)
+    if not kb:
+        raise HTTPException(status_code=404, detail=f"지식 베이스 '{kb_id}'를 찾을 수 없습니다.")
+    return kb.add_text(req.title, req.content)
+
+
+@app.delete("/api/knowledge/{kb_id}/sources/{source_id}")
+def api_remove_kb_source(kb_id: str, source_id: str):
+    """지식 베이스 소스 삭제"""
+    from core.knowledge_base import get_knowledge_base
+    kb = get_knowledge_base(kb_id)
+    if not kb:
+        raise HTTPException(status_code=404, detail=f"지식 베이스 '{kb_id}'를 찾을 수 없습니다.")
+    result = kb.remove_source(source_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=404, detail=result.get("message"))
+    return result
+
+
+@app.post("/api/knowledge/{kb_id}/query")
+async def api_query_knowledge_base(kb_id: str, req: KBQueryRequest):
+    """지식 베이스에 질문 (Gemini 2.5 Pro 그라운딩)"""
+    from core.knowledge_base import get_knowledge_base
+    kb = get_knowledge_base(kb_id)
+    if not kb:
+        raise HTTPException(status_code=404, detail=f"지식 베이스 '{kb_id}'를 찾을 수 없습니다.")
+    return await kb.query(req.question)
 
 
 # ═══════════════════════════════════════════════════════
