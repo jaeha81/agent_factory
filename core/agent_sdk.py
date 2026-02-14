@@ -50,7 +50,8 @@ except ImportError:
 # 모델 프로바이더
 # ═══════════════════════════════════════════════════════
 
-PROVIDER_CONFIGS = {
+# 무료 프로바이더 (우선 사용)
+FREE_PROVIDERS = {
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
         "key_env": "GROQ_API_KEY",
@@ -68,9 +69,21 @@ PROVIDER_CONFIGS = {
     },
 }
 
+# 유료 프로바이더 (무료 제한 시 폴백)
+PAID_PROVIDERS = {
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "key_env": "GEMINI_API_KEY",
+        "model": "gemini-2.5-pro",
+    },
+}
+
+# 전체 프로바이더 (API에서 참조용)
+PROVIDER_CONFIGS = {**FREE_PROVIDERS, **PAID_PROVIDERS}
+
 
 def _create_model(provider: str = "groq") -> "OpenAIChatCompletionsModel":
-    """기존 AI 라우터 프로바이더를 SDK 모델로 변환한다."""
+    """프로바이더 이름으로 SDK 모델을 생성한다."""
     if not SDK_AVAILABLE:
         raise RuntimeError("openai-agents SDK가 필요합니다. pip install openai-agents")
 
@@ -93,15 +106,28 @@ def _create_model(provider: str = "groq") -> "OpenAIChatCompletionsModel":
     )
 
 
-def _get_available_model() -> "OpenAIChatCompletionsModel":
-    """사용 가능한 첫 번째 프로바이더로 모델을 생성한다."""
-    for provider_name, config in PROVIDER_CONFIGS.items():
+def _get_available_model(include_paid: bool = False) -> "OpenAIChatCompletionsModel":
+    """사용 가능한 모델을 생성한다. 무료 우선, include_paid=True면 유료도 포함."""
+    # 1차: 무료 프로바이더 시도
+    for name, config in FREE_PROVIDERS.items():
         if os.environ.get(config["key_env"]):
             try:
-                return _create_model(provider_name)
+                return _create_model(name)
             except Exception as e:
-                logger.warning("프로바이더 %s 모델 생성 실패: %s", provider_name, e)
+                logger.warning("무료 프로바이더 %s 모델 생성 실패: %s", name, e)
                 continue
+
+    # 2차: 유료 프로바이더 폴백
+    if include_paid:
+        for name, config in PAID_PROVIDERS.items():
+            if os.environ.get(config["key_env"]):
+                try:
+                    logger.info("유료 프로바이더 폴백: %s (%s)", name, config["model"])
+                    return _create_model(name)
+                except Exception as e:
+                    logger.warning("유료 프로바이더 %s 모델 생성 실패: %s", name, e)
+                    continue
+
     raise RuntimeError("사용 가능한 AI 프로바이더가 없습니다. .env에 API 키를 설정하세요.")
 
 
@@ -543,37 +569,75 @@ def list_specialists() -> list[dict]:
 async def run_specialist(agent_type: str, task: str, provider: str = None) -> dict:
     """
     특정 전문 에이전트를 직접 실행한다.
+    무료 프로바이더 실패 시 Gemini 2.5 Pro로 자동 폴백.
 
     Args:
         agent_type: 전문 에이전트 타입 (code_reviewer, data_analyst, ...)
         task: 사용자 요청 텍스트
-        provider: LLM 프로바이더 (groq, together, openrouter). None이면 자동 선택.
+        provider: LLM 프로바이더 (groq, together, openrouter, gemini). None이면 자동 선택.
 
     Returns:
-        {"output": str, "agent": str, "agent_type": str, "error": str|None}
+        {"output": str, "agent": str, "agent_type": str, "provider": str, "error": str|None}
     """
     if not SDK_AVAILABLE:
         return {"output": "", "agent": "", "agent_type": agent_type,
-                "error": "openai-agents SDK가 설치되지 않았습니다."}
+                "provider": "", "error": "openai-agents SDK가 설치되지 않았습니다."}
 
+    # 명시적 프로바이더 지정 시 해당 프로바이더만 사용
+    if provider:
+        return await _run_specialist_with_model(agent_type, task, provider)
+
+    # 자동 선택: 무료 → 유료 폴백
+    # 1차: 무료 프로바이더로 시도
+    free_error = None
+    for name, config in FREE_PROVIDERS.items():
+        if not os.environ.get(config["key_env"]):
+            continue
+        result = await _run_specialist_with_model(agent_type, task, name)
+        if result["error"] is None:
+            return result
+        free_error = result["error"]
+        logger.warning("무료 프로바이더 %s 실행 실패, 다음 시도: %s", name, free_error)
+
+    # 2차: Gemini 2.5 Pro 폴백
+    for name, config in PAID_PROVIDERS.items():
+        if not os.environ.get(config["key_env"]):
+            continue
+        logger.info("유료 폴백 → %s (%s)", name, config["model"])
+        result = await _run_specialist_with_model(agent_type, task, name)
+        if result["error"] is None:
+            result["fallback"] = True
+            result["fallback_reason"] = f"무료 프로바이더 실패: {free_error}"
+            return result
+
+    return {
+        "output": "", "agent": SPECIALIST_DEFS.get(agent_type, {}).get("name", agent_type),
+        "agent_type": agent_type, "provider": "",
+        "error": free_error or "사용 가능한 프로바이더가 없습니다.",
+    }
+
+
+async def _run_specialist_with_model(agent_type: str, task: str, provider: str) -> dict:
+    """단일 프로바이더로 전문 에이전트를 실행한다."""
     try:
-        model = _create_model(provider) if provider else _get_available_model()
+        model = _create_model(provider)
         agent = _build_specialist(agent_type, model)
-
         result = await Runner.run(agent, task)
 
         return {
             "output": result.final_output,
             "agent": SPECIALIST_DEFS[agent_type]["name"],
             "agent_type": agent_type,
+            "provider": provider,
             "error": None,
         }
     except Exception as e:
-        logger.error("전문 에이전트 실행 실패 [%s]: %s", agent_type, e)
+        logger.error("에이전트 실행 실패 [%s/%s]: %s", agent_type, provider, e)
         return {
             "output": "",
             "agent": SPECIALIST_DEFS.get(agent_type, {}).get("name", agent_type),
             "agent_type": agent_type,
+            "provider": provider,
             "error": str(e),
         }
 
@@ -581,25 +645,58 @@ async def run_specialist(agent_type: str, task: str, provider: str = None) -> di
 async def run_triage(task: str, provider: str = None) -> dict:
     """
     트리아지 에이전트를 통해 자동으로 적합한 전문가를 선택하여 실행한다.
+    무료 프로바이더 실패 시 Gemini 2.5 Pro로 자동 폴백.
 
     Args:
         task: 사용자 요청 텍스트
         provider: LLM 프로바이더. None이면 자동 선택.
 
     Returns:
-        {"output": str, "agent": str, "agent_type": str, "error": str|None}
+        {"output": str, "agent": str, "agent_type": str, "provider": str, "error": str|None}
     """
     if not SDK_AVAILABLE:
         return {"output": "", "agent": "", "agent_type": "triage",
-                "error": "openai-agents SDK가 설치되지 않았습니다."}
+                "provider": "", "error": "openai-agents SDK가 설치되지 않았습니다."}
 
+    # 명시적 프로바이더 지정 시
+    if provider:
+        return await _run_triage_with_model(task, provider)
+
+    # 자동 선택: 무료 → 유료 폴백
+    free_error = None
+    for name, config in FREE_PROVIDERS.items():
+        if not os.environ.get(config["key_env"]):
+            continue
+        result = await _run_triage_with_model(task, name)
+        if result["error"] is None:
+            return result
+        free_error = result["error"]
+        logger.warning("트리아지 무료 프로바이더 %s 실패: %s", name, free_error)
+
+    # Gemini 2.5 Pro 폴백
+    for name, config in PAID_PROVIDERS.items():
+        if not os.environ.get(config["key_env"]):
+            continue
+        logger.info("트리아지 유료 폴백 → %s (%s)", name, config["model"])
+        result = await _run_triage_with_model(task, name)
+        if result["error"] is None:
+            result["fallback"] = True
+            result["fallback_reason"] = f"무료 프로바이더 실패: {free_error}"
+            return result
+
+    return {
+        "output": "", "agent": "트리아지", "agent_type": "triage",
+        "provider": "", "error": free_error or "사용 가능한 프로바이더가 없습니다.",
+    }
+
+
+async def _run_triage_with_model(task: str, provider: str) -> dict:
+    """단일 프로바이더로 트리아지 에이전트를 실행한다."""
     try:
-        model = _create_model(provider) if provider else _get_available_model()
+        model = _create_model(provider)
         triage = _build_triage(model)
-
         result = await Runner.run(triage, task)
 
-        # 어떤 에이전트가 최종 응답했는지 확인
         final_agent_name = result.last_agent.name if result.last_agent else "트리아지"
         agent_type = "triage"
         for at, defn in SPECIALIST_DEFS.items():
@@ -611,15 +708,14 @@ async def run_triage(task: str, provider: str = None) -> dict:
             "output": result.final_output,
             "agent": final_agent_name,
             "agent_type": agent_type,
+            "provider": provider,
             "error": None,
         }
     except Exception as e:
-        logger.error("트리아지 에이전트 실행 실패: %s", e)
+        logger.error("트리아지 실행 실패 [%s]: %s", provider, e)
         return {
-            "output": "",
-            "agent": "트리아지",
-            "agent_type": "triage",
-            "error": str(e),
+            "output": "", "agent": "트리아지", "agent_type": "triage",
+            "provider": provider, "error": str(e),
         }
 
 
