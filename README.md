@@ -151,3 +151,14 @@ skills_library/skills/<skill_id>.skill.json
 
 GitHub에 커밋하면 다른 PC에서 clone/pull만으로 동일한 스킬을 사용할 수 있습니다.
 자세한 스키마는 `skills_library/README.md` 참고.
+
+---
+
+## 📊 개발 현황 <!-- jh-progress -->
+
+| 항목 | 내용 |
+|------|------|
+| **진행률** | `███████████████░░░░░` **75%** |
+| **레포** | [agent_factory](https://github.com/jaeha81/agent_factory) |
+
+> 진행률: 75%
